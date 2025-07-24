@@ -1,0 +1,55 @@
+package gomysql
+
+import (
+	"fmt"
+	"reflect"
+)
+
+type RegisteredStructField struct {
+	Opts         SQLTagOpts
+	RealName     string
+	Type         reflect.Type
+	InternalType TypeRepresentation
+}
+
+type RegisteredStruct[T any] struct {
+	db                                                                                *Driver
+	Name                                                                              string
+	Type                                                                              reflect.Type
+	Fields                                                                            []RegisteredStructField
+	createTableSQL, insertSQL, selectSQL, updateSQL, deleteSQL, listSQL, selectAllSQL string
+	PrimaryKeyField                                                                   RegisteredStructField
+	insertOrdered, nonInsertionOrdered                                                []RegisteredStructField
+}
+
+type TypeRepresentation uint8
+
+const (
+	TypeRepInt TypeRepresentation = iota
+	TypeRepString
+	TypeRepBool
+	TypeRepArrayBlob
+	TypeRepStructBlob
+)
+
+func typeNameString(t TypeRepresentation) string {
+	switch t {
+	case TypeRepInt:
+		return "INTEGER"
+	case TypeRepString:
+		return "TEXT"
+	case TypeRepBool:
+		return "BOOLEAN"
+	case TypeRepArrayBlob:
+		return "BLOB"
+	case TypeRepStructBlob:
+		return "BLOB"
+	default:
+		return "UNKNOWN"
+	}
+}
+
+var (
+	ErrDatabaseInitialized    = fmt.Errorf("database already initialized")
+	ErrDatabaseNotInitialized = fmt.Errorf("database not initialized")
+)
