@@ -14,7 +14,34 @@ Now, let's create a struct that represents a table in the database. This package
 
 ```go
 type User struct {
-	ID       int       `gomysql:"id,primary,increment"`
-    Username string    `gomysql:"username,unique"`
+    Username string     `gomysql:"username,primary,unique"`
+    Password string     `gomysql:"password"`
+    Email    string     `gomysql:"email,unique"`
+    CreatedAt time.Time `gomysql:"creation"`
 }
 ```
+
+Now, we should register this struct to set up the database tables:
+
+```go
+func main() {
+    var (
+        handle *gomysql.RegisteredStruct[User]
+        err    error
+    )
+
+    if err = gomysql.Begin(":memory:"); err != nil {
+        panic(err)
+    }
+
+    if handle, err = gomysql.Register(User{}); err != nil {
+        panic(err)
+    }
+}
+```
+
+You can now call functions on the `handle` to perform database operations.
+
+## Contributing
+
+This was thrown together in a few hours, so there are likely many improvements that can be made. If you have suggestions or improvements, feel free to open an issue or submit a pull request. I would love to see this package grow.
