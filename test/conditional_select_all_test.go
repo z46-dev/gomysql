@@ -50,7 +50,7 @@ func TestFilters(t *testing.T) {
 	}
 
 	var results []*Document
-	if results, err = handler.SelectAllWithFilter(gomysql.NewFilter().KeyCmp(handler.FieldByGoName("Title"), gomysql.OpLike, "'%even%'")); err != nil {
+	if results, err = handler.SelectAllWithFilter(gomysql.NewFilter().KeyCmp(handler.FieldByGoName("Title"), gomysql.OpLike, "%even%")); err != nil {
 		t.Fatalf("failed to select all documents with filter: %v", err)
 	}
 

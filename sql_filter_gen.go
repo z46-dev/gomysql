@@ -5,6 +5,7 @@ import "fmt"
 func NewFilter() *Filter {
 	return &Filter{
 		filter:        "",
+		arguments:     make([]any, 0),
 		lastWasJoiner: true,
 	}
 }
@@ -18,7 +19,8 @@ func (f *Filter) KeyCmp(key *RegisteredStructField, op SQLOperator, value any) *
 		panic("KeyCmp must be preceded by a condition join operation or nothing")
 	}
 
-	f.filter += fmt.Sprintf(" %s %s %s", key.Opts.KeyName, op, value)
+	f.filter += fmt.Sprintf(" %s %s ?", key.Opts.KeyName, op)
+	f.arguments = append(f.arguments, value)
 	f.lastWasJoiner = false
 	return f
 }

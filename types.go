@@ -72,5 +72,6 @@ const (
 
 type Filter struct {
 	filter        string
+	arguments     []any
 	lastWasJoiner bool
 }

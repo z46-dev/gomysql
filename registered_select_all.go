@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func (r *RegisteredStruct[T]) selectAll(sql string) ([]*T, error) {
+func (r *RegisteredStruct[T]) selectAll(sql string, args ...any) ([]*T, error) {
 	if r.db == nil {
 		return nil, ErrDatabaseNotInitialized
 	}
@@ -16,7 +16,7 @@ func (r *RegisteredStruct[T]) selectAll(sql string) ([]*T, error) {
 	r.db.lock.Lock()
 	defer r.db.lock.Unlock()
 
-	rows, err := r.db.db.Query(sql)
+	rows, err := r.db.db.Query(sql, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all from %s: %w", r.Name, err)
 	}
@@ -98,5 +98,5 @@ func (r *RegisteredStruct[T]) SelectAllWithFilter(filter *Filter) ([]*T, error) 
 
 	fmt.Println("selecting all with filter:", fmt.Sprintf("%s WHERE %s;", r.selectAllSQL[:len(r.selectAllSQL)-1], strings.TrimSpace(filter.filter)))
 
-	return r.selectAll(fmt.Sprintf("%s WHERE %s;", r.selectAllSQL[:len(r.selectAllSQL)-1], strings.TrimSpace(filter.filter)))
+	return r.selectAll(fmt.Sprintf("%s WHERE %s;", r.selectAllSQL[:len(r.selectAllSQL)-1], strings.TrimSpace(filter.filter)), filter.arguments...)
 }
