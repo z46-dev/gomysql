@@ -31,8 +31,10 @@ func Register[T any](structInstance T) (registered *RegisteredStruct[T], err err
 
 			var internalType TypeRepresentation
 			switch field.Type.Kind() {
-			case reflect.Int:
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 				internalType = TypeRepInt
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+				internalType = TypeRepUint
 			case reflect.String:
 				internalType = TypeRepString
 			case reflect.Bool:
@@ -41,6 +43,10 @@ func Register[T any](structInstance T) (registered *RegisteredStruct[T], err err
 				internalType = TypeRepArrayBlob
 			case reflect.Struct:
 				internalType = TypeRepStructBlob
+			case reflect.Float32, reflect.Float64:
+				internalType = TypeRepFloat
+			case reflect.Map:
+				internalType = TypeRepMapBlob
 			default:
 				return nil, fmt.Errorf("unsupported type %s for field %s", field.Type.Kind(), field.Name)
 			}

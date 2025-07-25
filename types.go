@@ -26,24 +26,29 @@ type TypeRepresentation uint8
 
 const (
 	TypeRepInt TypeRepresentation = iota
+	TypeRepUint
 	TypeRepString
 	TypeRepBool
 	TypeRepArrayBlob
 	TypeRepStructBlob
+	TypeRepFloat
+	TypeRepMapBlob
 )
 
 func typeNameString(t TypeRepresentation) string {
 	switch t {
 	case TypeRepInt:
 		return "INTEGER"
+	case TypeRepUint:
+		return "INTEGER UNSIGNED"
 	case TypeRepString:
 		return "TEXT"
 	case TypeRepBool:
 		return "BOOLEAN"
-	case TypeRepArrayBlob:
+	case TypeRepArrayBlob, TypeRepMapBlob, TypeRepStructBlob:
 		return "BLOB"
-	case TypeRepStructBlob:
-		return "BLOB"
+	case TypeRepFloat:
+		return "FLOAT"
 	default:
 		return "UNKNOWN"
 	}

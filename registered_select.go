@@ -38,17 +38,21 @@ func (r *RegisteredStruct[T]) Select(primaryKeyValue any) (item *T, err error) {
 		switch field.InternalType {
 		case TypeRepInt:
 			elem.FieldByName(field.RealName).SetInt(raw.(int64))
+		case TypeRepUint:
+			elem.FieldByName(field.RealName).SetUint(raw.(uint64))
 		case TypeRepString:
 			elem.FieldByName(field.RealName).SetString(raw.(string))
 		case TypeRepBool:
 			elem.FieldByName(field.RealName).SetBool(raw.(bool))
-		case TypeRepArrayBlob, TypeRepStructBlob:
+		case TypeRepArrayBlob, TypeRepStructBlob, TypeRepMapBlob:
 			target := reflect.New(field.Type).Interface()
 			if err := gob.NewDecoder(bytes.NewReader(raw.([]byte))).Decode(target); err != nil {
 				return nil, fmt.Errorf("gob decode %s: %w", field.Opts.KeyName, err)
 			}
 
 			elem.FieldByName(field.RealName).Set(reflect.ValueOf(target).Elem())
+		case TypeRepFloat:
+			elem.FieldByName(field.RealName).SetFloat(raw.(float64))
 		default:
 			return nil, fmt.Errorf("unsupported type for field %s", field.Opts.KeyName)
 		}
