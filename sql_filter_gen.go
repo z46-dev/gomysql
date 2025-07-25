@@ -64,6 +64,26 @@ func (f *Filter) Ordering(field *RegisteredStructField, asc bool) *Filter {
 	return f
 }
 
+func (f *Filter) Limit(limit int) *Filter {
+	if f.lastWasJoiner {
+		panic("Limit must be preceded by a condition")
+	}
+
+	f.filter += fmt.Sprintf(" LIMIT %d", limit)
+	f.lastWasJoiner = true
+	return f
+}
+
+func (f *Filter) Offset(offset int) *Filter {
+	if f.lastWasJoiner {
+		panic("Offset must be preceded by a condition")
+	}
+
+	f.filter += fmt.Sprintf(" OFFSET %d", offset)
+	f.lastWasJoiner = true
+	return f
+}
+
 func (f *Filter) validate() error {
 	if f.lastWasJoiner {
 		return fmt.Errorf("filter ends with a joiner, expected a condition")
