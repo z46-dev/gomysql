@@ -5,9 +5,10 @@ import (
 	"encoding/gob"
 	"fmt"
 	"reflect"
+	"strings"
 )
 
-func (r *RegisteredStruct[T]) SelectAll() ([]*T, error) {
+func (r *RegisteredStruct[T]) selectAll(sql string) ([]*T, error) {
 	if r.db == nil {
 		return nil, ErrDatabaseNotInitialized
 	}
@@ -15,7 +16,7 @@ func (r *RegisteredStruct[T]) SelectAll() ([]*T, error) {
 	r.db.lock.Lock()
 	defer r.db.lock.Unlock()
 
-	rows, err := r.db.db.Query(r.selectAllSQL)
+	rows, err := r.db.db.Query(sql)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all from %s: %w", r.Name, err)
 	}
@@ -80,4 +81,22 @@ func (r *RegisteredStruct[T]) SelectAll() ([]*T, error) {
 	}
 
 	return results, nil
+}
+
+func (r *RegisteredStruct[T]) SelectAll() ([]*T, error) {
+	return r.selectAll(r.selectAllSQL)
+}
+
+func (r *RegisteredStruct[T]) SelectAllWithFilter(filter *Filter) ([]*T, error) {
+	if r.db == nil {
+		return nil, ErrDatabaseNotInitialized
+	}
+
+	if err := filter.validate(); err != nil {
+		return nil, fmt.Errorf("invalid filter: %w", err)
+	}
+
+	fmt.Println("selecting all with filter:", fmt.Sprintf("%s WHERE %s;", r.selectAllSQL[:len(r.selectAllSQL)-1], strings.TrimSpace(filter.filter)))
+
+	return r.selectAll(fmt.Sprintf("%s WHERE %s;", r.selectAllSQL[:len(r.selectAllSQL)-1], strings.TrimSpace(filter.filter)))
 }

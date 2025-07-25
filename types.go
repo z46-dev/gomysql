@@ -53,3 +53,24 @@ var (
 	ErrDatabaseInitialized    = fmt.Errorf("database already initialized")
 	ErrDatabaseNotInitialized = fmt.Errorf("database not initialized")
 )
+
+type SQLOperator string
+
+const (
+	OpEqual              SQLOperator = "="
+	OpNotEqual           SQLOperator = "!="
+	OpGreaterThan        SQLOperator = ">"
+	OpLessThan           SQLOperator = "<"
+	OpGreaterThanOrEqual SQLOperator = ">="
+	OpLessThanOrEqual    SQLOperator = "<="
+	OpLike               SQLOperator = "LIKE"
+	OpIn                 SQLOperator = "IN"
+	OpNotIn              SQLOperator = "NOT IN"
+	OpIsNull             SQLOperator = "IS NULL"
+	OpIsNotNull          SQLOperator = "IS NOT NULL"
+)
+
+type Filter struct {
+	filter        string
+	lastWasJoiner bool
+}
