@@ -110,7 +110,5 @@ func (r *RegisteredStruct[T]) SelectAllWithFilter(filter *Filter) ([]*T, error) 
 		return nil, fmt.Errorf("invalid filter: %w", err)
 	}
 
-	fmt.Println("selecting all with filter:", fmt.Sprintf("%s WHERE %s;", r.selectAllSQL[:len(r.selectAllSQL)-1], strings.TrimSpace(filter.filter)))
-
 	return r.selectAll(fmt.Sprintf("%s WHERE %s;", r.selectAllSQL[:len(r.selectAllSQL)-1], strings.TrimSpace(filter.filter)), filter.arguments...)
 }
