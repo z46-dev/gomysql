@@ -1,6 +1,6 @@
 module github.com/z46-dev/gomysql
 
-go 1.20.1
+go 1.23.1
 
 require (
 	github.com/stretchr/testify v1.10.0

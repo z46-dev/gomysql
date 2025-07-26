@@ -33,6 +33,7 @@ const (
 	TypeRepStructBlob
 	TypeRepFloat
 	TypeRepMapBlob
+	TypeRepPointer
 )
 
 func typeNameString(t TypeRepresentation) string {
@@ -45,7 +46,7 @@ func typeNameString(t TypeRepresentation) string {
 		return "TEXT"
 	case TypeRepBool:
 		return "BOOLEAN"
-	case TypeRepArrayBlob, TypeRepMapBlob, TypeRepStructBlob:
+	case TypeRepArrayBlob, TypeRepMapBlob, TypeRepStructBlob, TypeRepPointer:
 		return "BLOB"
 	case TypeRepFloat:
 		return "FLOAT"

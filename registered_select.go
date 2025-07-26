@@ -53,6 +53,16 @@ func (r *RegisteredStruct[T]) Select(primaryKeyValue any) (item *T, err error) {
 			elem.FieldByName(field.RealName).Set(reflect.ValueOf(target).Elem())
 		case TypeRepFloat:
 			elem.FieldByName(field.RealName).SetFloat(raw.(float64))
+		case TypeRepPointer:
+			if raw == nil {
+				elem.FieldByName(field.RealName).Set(reflect.Zero(field.Type))
+				continue
+			}
+			target := reflect.New(field.Type.Elem())
+			if err := gob.NewDecoder(bytes.NewReader(raw.([]byte))).Decode(target.Interface()); err != nil {
+				return nil, fmt.Errorf("gob decode %s: %w", field.Opts.KeyName, err)
+			}
+			elem.FieldByName(field.RealName).Set(target)
 		default:
 			return nil, fmt.Errorf("unsupported type for field %s", field.Opts.KeyName)
 		}

@@ -47,6 +47,12 @@ func Register[T any](structInstance T) (registered *RegisteredStruct[T], err err
 				internalType = TypeRepFloat
 			case reflect.Map:
 				internalType = TypeRepMapBlob
+			case reflect.Pointer:
+				if field.Type.Elem().Kind() == reflect.Struct {
+					internalType = TypeRepPointer
+				} else {
+					return nil, fmt.Errorf("unsupported pointer type %s for field %s", field.Type.Elem().Kind(), field.Name)
+				}
 			default:
 				return nil, fmt.Errorf("unsupported type %s for field %s", field.Type.Kind(), field.Name)
 			}
