@@ -2,6 +2,7 @@ package gomysql
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/gob"
 	"fmt"
 	"reflect"
@@ -29,6 +30,10 @@ func (r *RegisteredStruct[T]) Select(primaryKeyValue any) (item *T, err error) {
 
 	row := r.db.db.QueryRow(r.selectSQL, primaryKeyValue)
 	if err = row.Scan(scanArgs...); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+
 		return nil, fmt.Errorf("failed to select from %s: %w", r.Name, err)
 	}
 
