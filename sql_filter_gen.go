@@ -50,8 +50,8 @@ func (f *Filter) Ordering(field *RegisteredStructField, asc bool) *Filter {
 		panic("Ordering requires a valid field")
 	}
 
-	if f.lastWasJoiner {
-		panic("Ordering must be preceded by a condition")
+	if !f.lastWasJoiner {
+		panic("Ordering must be preceded by a join operation or nothing")
 	}
 
 	order := "ASC"
@@ -60,7 +60,7 @@ func (f *Filter) Ordering(field *RegisteredStructField, asc bool) *Filter {
 	}
 
 	f.filter += fmt.Sprintf(" ORDER BY %s %s", field.RealName, order)
-	f.lastWasJoiner = true
+	f.lastWasJoiner = false
 	return f
 }
 
