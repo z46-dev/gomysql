@@ -71,8 +71,10 @@ func TestDocStruct(t *testing.T) {
 		t.Fatalf("failed to delete document: %v", err)
 	}
 
-	if fetchedDoc, err = handler.Select(doc.ID); err == nil {
-		t.Fatalf("expected error when selecting deleted document, got none")
+	if fetchedDoc, err = handler.Select(doc.ID); err != nil {
+		t.Fatalf("expected no error when selecting deleted document, got %v", err)
+	} else if fetchedDoc != nil {
+		t.Fatalf("expected fetched document to be nil after deletion, got %v", fetchedDoc)
 	}
 
 	assert.Nil(t, fetchedDoc, "Fetched document should be nil after deletion")
