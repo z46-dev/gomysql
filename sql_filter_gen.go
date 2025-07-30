@@ -1,11 +1,14 @@
 package gomysql
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 func NewFilter() *Filter {
 	return &Filter{
-		filter:        "",
-		arguments:     make([]any, 0),
+		whereTokens:   []string{},
+		args:          []any{},
 		lastWasJoiner: true,
 	}
 }
@@ -16,11 +19,11 @@ func (f *Filter) KeyCmp(key *RegisteredStructField, op SQLOperator, value any) *
 	}
 
 	if !f.lastWasJoiner {
-		panic("KeyCmp must be preceded by a condition join operation or nothing")
+		panic("KeyCmp must be preceded by a joiner (And/Or) or be the first condition")
 	}
 
-	f.filter += fmt.Sprintf(" %s %s ?", key.Opts.KeyName, op)
-	f.arguments = append(f.arguments, value)
+	f.whereTokens = append(f.whereTokens, fmt.Sprintf("%s %s ?", key.Opts.KeyName, op))
+	f.args = append(f.args, value)
 	f.lastWasJoiner = false
 	return f
 }
@@ -30,7 +33,7 @@ func (f *Filter) And() *Filter {
 		panic("And must be preceded by a condition")
 	}
 
-	f.filter += " AND"
+	f.whereTokens = append(f.whereTokens, "AND")
 	f.lastWasJoiner = true
 	return f
 }
@@ -40,7 +43,7 @@ func (f *Filter) Or() *Filter {
 		panic("Or must be preceded by a condition")
 	}
 
-	f.filter += " OR"
+	f.whereTokens = append(f.whereTokens, "OR")
 	f.lastWasJoiner = true
 	return f
 }
@@ -50,44 +53,57 @@ func (f *Filter) Ordering(field *RegisteredStructField, asc bool) *Filter {
 		panic("Ordering requires a valid field")
 	}
 
-	if !f.lastWasJoiner {
-		panic("Ordering must be preceded by a join operation or nothing")
-	}
-
-	order := "ASC"
+	var dir string = "ASC"
 	if !asc {
-		order = "DESC"
+		dir = "DESC"
 	}
 
-	f.filter += fmt.Sprintf(" ORDER BY %s %s", field.RealName, order)
+	f.orderByClause = fmt.Sprintf("ORDER BY %s %s", field.RealName, dir)
 	f.lastWasJoiner = false
 	return f
 }
 
-func (f *Filter) Limit(limit int) *Filter {
-	if f.lastWasJoiner {
+func (f *Filter) Limit(n int) *Filter {
+	if f.lastWasJoiner && len(f.whereTokens) > 0 {
 		panic("Limit must be preceded by a condition")
 	}
 
-	f.filter += fmt.Sprintf(" LIMIT %d", limit)
+	f.limitClause = fmt.Sprintf("LIMIT %d", n)
 	f.lastWasJoiner = false
 	return f
 }
 
-func (f *Filter) Offset(offset int) *Filter {
+func (f *Filter) Offset(n int) *Filter {
 	if f.lastWasJoiner {
-		panic("Offset must be preceded by a condition")
+		panic("Offset must be preceded by a condition or LIMIT")
 	}
 
-	f.filter += fmt.Sprintf(" OFFSET %d", offset)
+	f.offsetClause = fmt.Sprintf("OFFSET %d", n)
 	f.lastWasJoiner = true
 	return f
 }
 
-func (f *Filter) validate() error {
-	if f.lastWasJoiner {
-		return fmt.Errorf("filter ends with a joiner, expected a condition")
+func (f *Filter) Build() (sqlFragment string, args []any, err error) {
+	if f.lastWasJoiner && len(f.whereTokens) > 0 {
+		return "", nil, fmt.Errorf("filter ends with a joiner; expected a condition")
 	}
 
-	return nil
+	var parts []string
+	if len(f.whereTokens) > 0 {
+		parts = append(parts, "WHERE "+strings.Join(f.whereTokens, " "))
+	}
+
+	if f.orderByClause != "" {
+		parts = append(parts, f.orderByClause)
+	}
+
+	if f.limitClause != "" {
+		parts = append(parts, f.limitClause)
+	}
+
+	if f.offsetClause != "" {
+		parts = append(parts, f.offsetClause)
+	}
+
+	return strings.Join(parts, " "), f.args, nil
 }

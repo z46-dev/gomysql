@@ -77,7 +77,8 @@ const (
 )
 
 type Filter struct {
-	filter        string
-	arguments     []any
-	lastWasJoiner bool
+	args                                     []any
+	whereTokens                              []string
+	orderByClause, limitClause, offsetClause string
+	lastWasJoiner                            bool
 }

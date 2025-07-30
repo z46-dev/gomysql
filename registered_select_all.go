@@ -106,9 +106,15 @@ func (r *RegisteredStruct[T]) SelectAllWithFilter(filter *Filter) ([]*T, error) 
 		return nil, ErrDatabaseNotInitialized
 	}
 
-	if err := filter.validate(); err != nil {
-		return nil, fmt.Errorf("invalid filter: %w", err)
+	var (
+		filterString string
+		filterArgs   []any
+		err          error
+	)
+
+	if filterString, filterArgs, err = filter.Build(); err != nil {
+		return nil, fmt.Errorf("failed to build filter: %w", err)
 	}
 
-	return r.selectAll(fmt.Sprintf("%s WHERE %s;", r.selectAllSQL[:len(r.selectAllSQL)-1], strings.TrimSpace(filter.filter)), filter.arguments...)
+	return r.selectAll(fmt.Sprintf("%s %s;", r.selectAllSQL[:len(r.selectAllSQL)-1], strings.TrimSpace(filterString)), filterArgs...)
 }
