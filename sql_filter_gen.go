@@ -70,7 +70,7 @@ func (f *Filter) Limit(limit int) *Filter {
 	}
 
 	f.filter += fmt.Sprintf(" LIMIT %d", limit)
-	f.lastWasJoiner = true
+	f.lastWasJoiner = false
 	return f
 }
 
