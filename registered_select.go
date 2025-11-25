@@ -48,7 +48,11 @@ func (r *RegisteredStruct[T]) Select(primaryKeyValue any) (item *T, err error) {
 		case TypeRepString:
 			elem.FieldByName(field.RealName).SetString(raw.(string))
 		case TypeRepBool:
-			elem.FieldByName(field.RealName).SetBool(raw.(bool))
+			boolean, err := sqlBool(raw)
+			if err != nil {
+				return nil, fmt.Errorf("convert %s to bool: %w", field.Opts.KeyName, err)
+			}
+			elem.FieldByName(field.RealName).SetBool(boolean)
 		case TypeRepArrayBlob, TypeRepStructBlob, TypeRepMapBlob:
 			target := reflect.New(field.Type).Interface()
 			if err := gob.NewDecoder(bytes.NewReader(raw.([]byte))).Decode(target); err != nil {

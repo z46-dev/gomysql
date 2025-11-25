@@ -29,10 +29,11 @@ func TestDocStruct(t *testing.T) {
 	}
 
 	var doc = &Document{
-		Title:    "Test Document",
-		Body:     "This is a test document.",
-		Tags:     []string{"test", "document"},
-		Creation: time.Now(),
+		Title:        "Test Document",
+		Body:         "This is a test document.",
+		Tags:         []string{"test", "document"},
+		Creation:     time.Now(),
+		BooleanField: true,
 	}
 
 	if err = handler.Insert(doc); err != nil {
