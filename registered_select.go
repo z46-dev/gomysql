@@ -39,46 +39,91 @@ func (r *RegisteredStruct[T]) Select(primaryKeyValue any) (item *T, err error) {
 
 	for i, field := range r.nonInsertionOrdered {
 		raw := values[i]
+		fieldValue := elem.FieldByIndex(field.Index)
 
 		switch field.InternalType {
 		case TypeRepInt:
-			elem.FieldByName(field.RealName).SetInt(raw.(int64))
+			fieldValue.SetInt(raw.(int64))
 		case TypeRepUint:
-			elem.FieldByName(field.RealName).SetUint(raw.(uint64))
+			fieldValue.SetUint(raw.(uint64))
 		case TypeRepString:
-			elem.FieldByName(field.RealName).SetString(raw.(string))
+			fieldValue.SetString(raw.(string))
 		case TypeRepBool:
 			boolean, err := sqlBool(raw)
 			if err != nil {
 				return nil, fmt.Errorf("convert %s to bool: %w", field.Opts.KeyName, err)
 			}
-			elem.FieldByName(field.RealName).SetBool(boolean)
+			fieldValue.SetBool(boolean)
 		case TypeRepArrayBlob, TypeRepStructBlob, TypeRepMapBlob:
+			if raw == nil {
+				fieldValue.Set(reflect.Zero(field.Type))
+				continue
+			}
+			if field.InternalType == TypeRepArrayBlob && field.Type.Kind() == reflect.Slice && field.Type.Elem().Kind() == reflect.String {
+				bytesRaw, ok := raw.([]byte)
+				if !ok {
+					return nil, fmt.Errorf("unsupported array blob type %T for field %s", raw, field.Opts.KeyName)
+				}
+				if decoded, handled, err := decodeStringSlice(bytesRaw); err != nil {
+					return nil, fmt.Errorf("decode string slice %s: %w", field.Opts.KeyName, err)
+				} else if handled {
+					if decoded == nil {
+						fieldValue.Set(reflect.Zero(field.Type))
+						continue
+					}
+					fieldValue.Set(reflect.ValueOf(decoded))
+					continue
+				}
+			}
+			if field.InternalType == TypeRepStructBlob && field.Type == timeType {
+				bytesRaw, ok := raw.([]byte)
+				if !ok {
+					return nil, fmt.Errorf("unsupported time blob type %T for field %s", raw, field.Opts.KeyName)
+				}
+				if decoded, handled, err := decodeTimeValue(bytesRaw); err != nil {
+					return nil, fmt.Errorf("decode time %s: %w", field.Opts.KeyName, err)
+				} else if handled {
+					fieldValue.Set(reflect.ValueOf(decoded))
+					continue
+				}
+			}
 			target := reflect.New(field.Type).Interface()
 			if err := gob.NewDecoder(bytes.NewReader(raw.([]byte))).Decode(target); err != nil {
 				return nil, fmt.Errorf("gob decode %s: %w", field.Opts.KeyName, err)
 			}
 
-			elem.FieldByName(field.RealName).Set(reflect.ValueOf(target).Elem())
+			fieldValue.Set(reflect.ValueOf(target).Elem())
 		case TypeRepFloat:
-			elem.FieldByName(field.RealName).SetFloat(raw.(float64))
+			fieldValue.SetFloat(raw.(float64))
 		case TypeRepPointer:
 			if raw == nil {
-				elem.FieldByName(field.RealName).Set(reflect.Zero(field.Type))
+				fieldValue.Set(reflect.Zero(field.Type))
 				continue
+			}
+			if field.Type.Elem() == timeType {
+				bytesRaw, ok := raw.([]byte)
+				if !ok {
+					return nil, fmt.Errorf("unsupported time blob type %T for field %s", raw, field.Opts.KeyName)
+				}
+				if decoded, handled, err := decodeTimeValue(bytesRaw); err != nil {
+					return nil, fmt.Errorf("decode time %s: %w", field.Opts.KeyName, err)
+				} else if handled {
+					fieldValue.Set(reflect.ValueOf(&decoded))
+					continue
+				}
 			}
 			target := reflect.New(field.Type.Elem())
 			if err := gob.NewDecoder(bytes.NewReader(raw.([]byte))).Decode(target.Interface()); err != nil {
 				return nil, fmt.Errorf("gob decode %s: %w", field.Opts.KeyName, err)
 			}
-			elem.FieldByName(field.RealName).Set(target)
+			fieldValue.Set(target)
 		default:
 			return nil, fmt.Errorf("unsupported type for field %s", field.Opts.KeyName)
 		}
 	}
 
 	if primaryKeyField := r.PrimaryKeyField; primaryKeyField.RealName != "" {
-		elem.FieldByName(primaryKeyField.RealName).Set(reflect.ValueOf(primaryKeyValue))
+		elem.FieldByIndex(primaryKeyField.Index).Set(reflect.ValueOf(primaryKeyValue))
 	}
 
 	return item, nil

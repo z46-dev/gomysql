@@ -2,6 +2,7 @@ package gomysql
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 )
 
@@ -22,8 +23,32 @@ func (f *Filter) KeyCmp(key *RegisteredStructField, op SQLOperator, value any) *
 		panic("KeyCmp must be preceded by a joiner (And/Or) or be the first condition")
 	}
 
-	f.whereTokens = append(f.whereTokens, fmt.Sprintf("%s %s ?", key.Opts.KeyName, op))
-	f.args = append(f.args, value)
+	switch op {
+	case OpIsNull, OpIsNotNull:
+		if value != nil {
+			panic("KeyCmp with IS NULL/IS NOT NULL does not accept a value")
+		}
+		f.whereTokens = append(f.whereTokens, fmt.Sprintf("%s %s", key.Opts.KeyName, op))
+	case OpIn, OpNotIn:
+		if value == nil {
+			panic("KeyCmp with IN/NOT IN requires a slice or array value")
+		}
+		val := reflect.ValueOf(value)
+		if val.Kind() != reflect.Slice && val.Kind() != reflect.Array {
+			panic("KeyCmp with IN/NOT IN requires a slice or array value")
+		}
+		if val.Len() == 0 {
+			panic("KeyCmp with IN/NOT IN requires at least one value")
+		}
+		placeholders := strings.Repeat("?, ", val.Len()-1) + "?"
+		f.whereTokens = append(f.whereTokens, fmt.Sprintf("%s %s (%s)", key.Opts.KeyName, op, placeholders))
+		for i := 0; i < val.Len(); i++ {
+			f.args = append(f.args, val.Index(i).Interface())
+		}
+	default:
+		f.whereTokens = append(f.whereTokens, fmt.Sprintf("%s %s ?", key.Opts.KeyName, op))
+		f.args = append(f.args, value)
+	}
 	f.lastWasJoiner = false
 	return f
 }
@@ -45,6 +70,26 @@ func (f *Filter) Or() *Filter {
 
 	f.whereTokens = append(f.whereTokens, "OR")
 	f.lastWasJoiner = true
+	return f
+}
+
+func (f *Filter) OpenGroup() *Filter {
+	if !f.lastWasJoiner {
+		panic("OpenGroup must be preceded by a joiner or be the first condition")
+	}
+
+	f.whereTokens = append(f.whereTokens, "(")
+	f.lastWasJoiner = true
+	return f
+}
+
+func (f *Filter) CloseGroup() *Filter {
+	if f.lastWasJoiner {
+		panic("CloseGroup must be preceded by a condition")
+	}
+
+	f.whereTokens = append(f.whereTokens, ")")
+	f.lastWasJoiner = false
 	return f
 }
 

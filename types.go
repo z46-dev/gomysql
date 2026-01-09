@@ -9,6 +9,7 @@ type RegisteredStructField struct {
 	Opts         SQLTagOpts
 	RealName     string
 	Type         reflect.Type
+	Index        []int
 	InternalType TypeRepresentation
 }
 
@@ -82,3 +83,10 @@ type Filter struct {
 	orderByClause, limitClause, offsetClause string
 	lastWasJoiner                            bool
 }
+
+type UpdateAssignment struct {
+	clause string
+	args   []any
+}
+
+type ReturnedValues map[string]any

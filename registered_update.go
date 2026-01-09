@@ -16,7 +16,7 @@ func (r *RegisteredStruct[T]) Update(item *T) error {
 	)
 
 	for _, field := range r.nonInsertionOrdered {
-		if val, err := getSQLValueOf(field, elem.FieldByName(field.RealName)); err != nil {
+		if val, err := getSQLValueOf(field, elem.FieldByIndex(field.Index)); err != nil {
 			return fmt.Errorf("value conversion %s: %w", field.Opts.KeyName, err)
 		} else {
 			values = append(values, val)
@@ -24,7 +24,7 @@ func (r *RegisteredStruct[T]) Update(item *T) error {
 	}
 
 	if primaryKeyField := r.PrimaryKeyField; primaryKeyField.RealName != "" {
-		values = append(values, elem.FieldByName(primaryKeyField.RealName).Interface())
+		values = append(values, elem.FieldByIndex(primaryKeyField.Index).Interface())
 	}
 
 	r.db.lock.Lock()

@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"reflect"
+	"time"
 )
 
 func getSQLValueOf(field RegisteredStructField, structField reflect.Value) (any, error) {
@@ -16,6 +17,16 @@ func getSQLValueOf(field RegisteredStructField, structField reflect.Value) (any,
 	case TypeRepBool:
 		return structField.Bool(), nil
 	case TypeRepArrayBlob, TypeRepStructBlob, TypeRepMapBlob:
+		if field.InternalType == TypeRepArrayBlob && field.Type.Kind() == reflect.Slice && field.Type.Elem().Kind() == reflect.String {
+			return encodeStringSlice(structField.Interface().([]string)), nil
+		}
+		if field.InternalType == TypeRepStructBlob && field.Type == timeType {
+			encoded, err := encodeTimeValue(structField.Interface().(time.Time))
+			if err != nil {
+				return nil, fmt.Errorf("encode time %s: %w", field.Opts.KeyName, err)
+			}
+			return encoded, nil
+		}
 		var buf bytes.Buffer
 		if err := gob.NewEncoder(&buf).Encode(structField.Interface()); err != nil {
 			return nil, fmt.Errorf("gob encoding %s: %w", field.Opts.KeyName, err)
@@ -29,6 +40,13 @@ func getSQLValueOf(field RegisteredStructField, structField reflect.Value) (any,
 	case TypeRepPointer:
 		if structField.IsNil() {
 			return nil, nil
+		}
+		if field.Type.Elem() == timeType {
+			encoded, err := encodeTimeValue(structField.Elem().Interface().(time.Time))
+			if err != nil {
+				return nil, fmt.Errorf("encode time %s: %w", field.Opts.KeyName, err)
+			}
+			return encoded, nil
 		}
 		var buf bytes.Buffer
 		if err := gob.NewEncoder(&buf).Encode(structField.Interface()); err != nil {

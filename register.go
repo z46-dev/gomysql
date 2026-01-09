@@ -61,6 +61,7 @@ func Register[T any](structInstance T) (registered *RegisteredStruct[T], err err
 				Opts:         opts,
 				RealName:     field.Name,
 				Type:         field.Type,
+				Index:        field.Index,
 				InternalType: internalType,
 			})
 		}

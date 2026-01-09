@@ -16,7 +16,7 @@ func (r *RegisteredStruct[T]) Insert(item *T) error {
 	)
 
 	for _, field := range r.insertOrdered {
-		if val, err := getSQLValueOf(field, elem.FieldByName(field.RealName)); err != nil {
+		if val, err := getSQLValueOf(field, elem.FieldByIndex(field.Index)); err != nil {
 			return fmt.Errorf("value conversion %s: %w", field.Opts.KeyName, err)
 		} else {
 			values = append(values, val)
@@ -32,7 +32,7 @@ func (r *RegisteredStruct[T]) Insert(item *T) error {
 		if lastInsertID, err := result.LastInsertId(); err != nil {
 			return fmt.Errorf("auto-incr ID fail %s: %w", r.Name, err)
 		} else {
-			elem.FieldByName(field.RealName).SetInt(lastInsertID)
+			elem.FieldByIndex(field.Index).SetInt(lastInsertID)
 		}
 	}
 
