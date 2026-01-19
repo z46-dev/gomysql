@@ -57,10 +57,22 @@ func (r *RegisteredStruct[T]) selectAll(sql string, args ...any) ([]*T, error) {
 			fieldValue := elem.FieldByIndex(field.Index)
 			switch field.InternalType {
 			case TypeRepInt:
+				if raw == nil {
+					fieldValue.SetInt(0)
+					continue
+				}
 				fieldValue.SetInt(raw.(int64))
 			case TypeRepUint:
+				if raw == nil {
+					fieldValue.SetUint(0)
+					continue
+				}
 				fieldValue.SetUint(raw.(uint64))
 			case TypeRepString:
+				if raw == nil {
+					fieldValue.SetString("")
+					continue
+				}
 				fieldValue.SetString(raw.(string))
 			case TypeRepBool:
 				boolean, err := sqlBool(raw)
@@ -107,6 +119,10 @@ func (r *RegisteredStruct[T]) selectAll(sql string, args ...any) ([]*T, error) {
 				}
 				fieldValue.Set(reflect.ValueOf(target).Elem())
 			case TypeRepFloat:
+				if raw == nil {
+					fieldValue.SetFloat(0)
+					continue
+				}
 				fieldValue.SetFloat(raw.(float64))
 			case TypeRepPointer:
 				if raw == nil {
