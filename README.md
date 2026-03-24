@@ -21,6 +21,19 @@ type User struct {
 }
 ```
 
+Foreign keys are declared in the same tag with `fkey:StructGoName.mysqlFieldName`:
+
+```go
+type Team struct {
+    ID int `gomysql:"id,primary,increment"`
+}
+
+type Player struct {
+    ID     int `gomysql:"id,primary,increment"`
+    TeamID int `gomysql:"team_id,fkey:Team.id"`
+}
+```
+
 Now, we should register this struct to set up the database tables:
 
 ```go

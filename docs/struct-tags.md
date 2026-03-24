@@ -19,6 +19,20 @@ Supported options:
 - `increment` enables autoincrement on the primary key.
 - `unique` adds a UNIQUE constraint.
 - `notnull` adds a NOT NULL constraint.
+- `fkey:StructGoName.mysqlFieldName` adds a foreign key reference to another registered table.
+
+Example:
+
+```go
+type User struct {
+	ID int `gomysql:"id,primary,increment"`
+}
+
+type Session struct {
+	ID     int `gomysql:"id,primary,increment"`
+	UserID int `gomysql:"user_id,fkey:User.id"`
+}
+```
 
 ## Supported field kinds
 

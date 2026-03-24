@@ -26,6 +26,14 @@ func Begin(dbPath string) (err error) {
 	if db, err = sql.Open("sqlite", dbPath); err != nil {
 		return
 	} else {
+		db.SetMaxOpenConns(1)
+		db.SetMaxIdleConns(1)
+
+		if _, err = db.Exec("PRAGMA foreign_keys = ON;"); err != nil {
+			_ = db.Close()
+			return
+		}
+
 		DB = &Driver{
 			db:       db,
 			lock:     &sync.RWMutex{},

@@ -33,12 +33,39 @@ type columnInfo struct {
 	Type string
 }
 
+type foreignKeyInfo struct {
+	From  string
+	Table string
+	To    string
+}
+
 func normalizeIdentifier(name string) string {
 	return strings.ToLower(strings.TrimSpace(name))
 }
 
 func normalizeSQLType(typeName string) string {
 	return strings.ToUpper(strings.Join(strings.Fields(typeName), " "))
+}
+
+func foreignKeyRefsEqual(info *foreignKeyInfo, ref *ForeignKeyRef) bool {
+	switch {
+	case info == nil && ref == nil:
+		return true
+	case info == nil || ref == nil:
+		return false
+	default:
+		return normalizeIdentifier(info.Table) == normalizeIdentifier(ref.TableName) &&
+			normalizeIdentifier(info.To) == normalizeIdentifier(ref.ColumnName)
+	}
+}
+
+func lookupForeignKeyRef(foreignKeys map[string]foreignKeyInfo, key string) *foreignKeyInfo {
+	info, ok := foreignKeys[key]
+	if !ok {
+		return nil
+	}
+
+	return &info
 }
 
 func (d *Driver) tableColumns(table string) ([]columnInfo, error) {
@@ -76,6 +103,49 @@ func (d *Driver) tableColumns(table string) ([]columnInfo, error) {
 	return columns, nil
 }
 
+func (d *Driver) tableForeignKeys(table string) (map[string]foreignKeyInfo, error) {
+	rows, err := d.db.Query(fmt.Sprintf("PRAGMA foreign_key_list(%s);", table))
+	if err != nil {
+		return nil, fmt.Errorf("describe foreign keys %s: %w", table, err)
+	}
+	defer rows.Close()
+
+	foreignKeys := make(map[string]foreignKeyInfo)
+	for rows.Next() {
+		var (
+			id       int
+			seq      int
+			refTable string
+			from     string
+			to       string
+			onUpdate string
+			onDelete string
+			match    string
+		)
+
+		if err := rows.Scan(&id, &seq, &refTable, &from, &to, &onUpdate, &onDelete, &match); err != nil {
+			return nil, fmt.Errorf("scan foreign key info %s: %w", table, err)
+		}
+
+		// This package only generates single-column foreign keys.
+		if seq != 0 {
+			continue
+		}
+
+		foreignKeys[normalizeIdentifier(from)] = foreignKeyInfo{
+			From:  from,
+			Table: refTable,
+			To:    to,
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate foreign key info %s: %w", table, err)
+	}
+
+	return foreignKeys, nil
+}
+
 func (r *RegisteredStruct[T]) Migrate(opts MigrationOptions) (*MigrationReport, error) {
 	if r.db == nil {
 		return nil, ErrDatabaseNotInitialized
@@ -90,6 +160,11 @@ func (r *RegisteredStruct[T]) Migrate(opts MigrationOptions) (*MigrationReport, 
 	}
 
 	existingColumns, err := r.db.tableColumns(r.Name)
+	if err != nil {
+		return report, err
+	}
+
+	existingForeignKeys, err := r.db.tableForeignKeys(r.Name)
 	if err != nil {
 		return report, err
 	}
@@ -138,7 +213,8 @@ func (r *RegisteredStruct[T]) Migrate(opts MigrationOptions) (*MigrationReport, 
 			report.RenamedColumns[oldCol.Name] = keyName
 			usedExisting[oldKey] = true
 
-			if normalizeSQLType(oldCol.Type) != normalizeSQLType(typeNameString(field.InternalType)) {
+			if normalizeSQLType(oldCol.Type) != normalizeSQLType(typeNameString(field.InternalType)) ||
+				!foreignKeyRefsEqual(lookupForeignKeyRef(existingForeignKeys, oldKey), field.Opts.ForeignKey) {
 				report.ChangedColumns = append(report.ChangedColumns, keyName)
 			}
 			continue
@@ -146,7 +222,8 @@ func (r *RegisteredStruct[T]) Migrate(opts MigrationOptions) (*MigrationReport, 
 
 		if col, ok := existingByKey[key]; ok {
 			usedExisting[key] = true
-			if normalizeSQLType(col.Type) != normalizeSQLType(typeNameString(field.InternalType)) {
+			if normalizeSQLType(col.Type) != normalizeSQLType(typeNameString(field.InternalType)) ||
+				!foreignKeyRefsEqual(lookupForeignKeyRef(existingForeignKeys, key), field.Opts.ForeignKey) {
 				report.ChangedColumns = append(report.ChangedColumns, keyName)
 			}
 			continue
@@ -188,7 +265,7 @@ func (r *RegisteredStruct[T]) Migrate(opts MigrationOptions) (*MigrationReport, 
 
 	for _, name := range report.AddedColumns {
 		field := desiredByKey[normalizeIdentifier(name)]
-		columnSQL := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s;", r.Name, field.Opts.KeyName, typeNameString(field.InternalType))
+		columnSQL := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s;", r.Name, columnDefinition(field, false))
 		if _, err := r.db.db.Exec(columnSQL); err != nil {
 			return report, fmt.Errorf("add column %s: %w", field.Opts.KeyName, err)
 		}
@@ -234,6 +311,11 @@ func (r *RegisteredStruct[T]) rebuildTable(existingByKey map[string]columnInfo, 
 	tx, err := r.db.db.Begin()
 	if err != nil {
 		return fmt.Errorf("begin migration %s: %w", r.Name, err)
+	}
+
+	if _, err := tx.Exec("PRAGMA defer_foreign_keys = ON;"); err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("defer foreign keys for %s: %w", r.Name, err)
 	}
 
 	if _, err := tx.Exec(createSQL); err != nil {

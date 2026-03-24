@@ -90,3 +90,7 @@ type UpdateAssignment struct {
 }
 
 type ReturnedValues map[string]any
+
+func (o SQLTagOpts) HasForeignKey() bool {
+	return o.ForeignKey != nil
+}

@@ -5,6 +5,32 @@ import (
 	"strings"
 )
 
+func columnDefinition(field RegisteredStructField, includePrimaryKey bool) string {
+	var parts []string
+	parts = append(parts, field.Opts.KeyName, typeNameString(field.InternalType))
+
+	if includePrimaryKey && field.Opts.PrimaryKey {
+		parts = append(parts, "PRIMARY KEY")
+		if field.Opts.AutoIncr {
+			parts = append(parts, "AUTOINCREMENT")
+		}
+	}
+
+	if field.Opts.Unique {
+		parts = append(parts, "UNIQUE")
+	}
+
+	if field.Opts.NotNull {
+		parts = append(parts, "NOT NULL")
+	}
+
+	if field.Opts.HasForeignKey() {
+		parts = append(parts, fmt.Sprintf("REFERENCES %s(%s)", field.Opts.ForeignKey.TableName, field.Opts.ForeignKey.ColumnName))
+	}
+
+	return strings.Join(parts, " ")
+}
+
 // CREATE TABLE IF NOT EXISTS X (key1 INTEGER PRIMARY KEY, key2 TEXT, ...);
 // with autoincrement: INSERT OR REPLACE INTO X (key2, ...) VALUES (?, ...);
 // without autoincrement: INSERT OR REPLACE INTO X (key1, key2, ...) VALUES (?, ?, ...);
@@ -22,20 +48,10 @@ func generateSQLStatements[T any](r *RegisteredStruct[T]) {
 	}
 
 	r.createTableSQL = fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (", r.Name)
-	var pKeyStr = fmt.Sprintf("%s %s PRIMARY KEY", pKey.Opts.KeyName, typeNameString(pKey.InternalType))
+	var pKeyStr = columnDefinition(pKey, true)
 
-	if pKey.Opts.AutoIncr {
-		pKeyStr += " AUTOINCREMENT"
-	} else {
+	if !pKey.Opts.AutoIncr {
 		r.insertOrdered = append(r.insertOrdered, pKey)
-	}
-
-	if pKey.Opts.Unique {
-		pKeyStr += " UNIQUE"
-	}
-
-	if pKey.Opts.NotNull {
-		pKeyStr += " NOT NULL"
 	}
 
 	r.createTableSQL += pKeyStr + ", "
@@ -45,15 +61,7 @@ func generateSQLStatements[T any](r *RegisteredStruct[T]) {
 			continue
 		}
 
-		var str = fmt.Sprintf("%s %s", field.Opts.KeyName, typeNameString(field.InternalType))
-		if field.Opts.Unique {
-			str += " UNIQUE"
-		}
-
-		if field.Opts.NotNull {
-			str += " NOT NULL"
-		}
-
+		var str = columnDefinition(field, false)
 		r.createTableSQL += str + ", "
 		r.insertOrdered = append(r.insertOrdered, field)
 		r.nonInsertionOrdered = append(r.nonInsertionOrdered, field)

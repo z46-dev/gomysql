@@ -15,3 +15,13 @@ type TypeItem struct {
 	ID     int  `gomysql:"id,primary,increment"`
 	Active bool `gomysql:"active"`
 }
+
+type Parent struct {
+	ID   int    `gomysql:"id,primary,increment"`
+	Name string `gomysql:"name"`
+}
+
+type Child struct {
+	ID       int `gomysql:"id,primary,increment"`
+	ParentID int `gomysql:"parent_id,fkey:Parent.id"`
+}

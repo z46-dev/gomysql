@@ -136,3 +136,90 @@ func TestMigrationChangeType(t *testing.T) {
 		}
 	})
 }
+
+func TestForeignKeyConstraint(t *testing.T) {
+	withTestDB(t, func() {
+		parentHandler, err := gomysql.Register(v2.Parent{})
+		if err != nil {
+			t.Fatalf("failed to register parent struct: %v", err)
+		}
+
+		childHandler, err := gomysql.Register(v2.Child{})
+		if err != nil {
+			t.Fatalf("failed to register child struct: %v", err)
+		}
+
+		parent := &v2.Parent{Name: "parent"}
+		if err := parentHandler.Insert(parent); err != nil {
+			t.Fatalf("failed to insert parent: %v", err)
+		}
+
+		child := &v2.Child{ParentID: parent.ID}
+		if err := childHandler.Insert(child); err != nil {
+			t.Fatalf("failed to insert child with valid foreign key: %v", err)
+		}
+
+		if _, err := childHandler.Select(child.ID); err != nil {
+			t.Fatalf("failed to select child with valid foreign key: %v", err)
+		}
+
+		if err := childHandler.Insert(&v2.Child{ParentID: parent.ID + 999}); err == nil {
+			t.Fatalf("expected foreign key violation when parent does not exist")
+		}
+	})
+}
+
+func TestMigrationAddForeignKey(t *testing.T) {
+	withTestDB(t, func() {
+		parentHandler, err := gomysql.Register(v1.Parent{})
+		if err != nil {
+			t.Fatalf("failed to register parent struct: %v", err)
+		}
+
+		v1ChildHandler, err := gomysql.Register(v1.Child{})
+		if err != nil {
+			t.Fatalf("failed to register v1 child struct: %v", err)
+		}
+
+		parent := &v1.Parent{Name: "parent"}
+		if err := parentHandler.Insert(parent); err != nil {
+			t.Fatalf("failed to insert parent: %v", err)
+		}
+
+		child := &v1.Child{ParentID: parent.ID}
+		if err := v1ChildHandler.Insert(child); err != nil {
+			t.Fatalf("failed to insert v1 child: %v", err)
+		}
+
+		v2ChildHandler, err := gomysql.Register(v2.Child{})
+		if err != nil {
+			t.Fatalf("failed to register v2 child struct: %v", err)
+		}
+
+		report, err := v2ChildHandler.Migrate(gomysql.MigrationOptions{AllowDestructive: true})
+		if err != nil {
+			t.Fatalf("failed to migrate foreign key change: %v", err)
+		}
+
+		if !report.Rebuilt {
+			t.Fatalf("expected rebuild for foreign key migration")
+		}
+
+		if len(report.ChangedColumns) != 1 || report.ChangedColumns[0] != "parent_id" {
+			t.Fatalf("expected changed column to be parent_id, got %v", report.ChangedColumns)
+		}
+
+		got, err := v2ChildHandler.Select(child.ID)
+		if err != nil {
+			t.Fatalf("failed to select child after foreign key migration: %v", err)
+		}
+
+		if got.ParentID != parent.ID {
+			t.Fatalf("expected ParentID to remain %d after migration, got %d", parent.ID, got.ParentID)
+		}
+
+		if err := v2ChildHandler.Insert(&v2.Child{ParentID: parent.ID + 999}); err == nil {
+			t.Fatalf("expected migrated foreign key to reject missing parent")
+		}
+	})
+}
