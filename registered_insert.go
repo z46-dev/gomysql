@@ -25,13 +25,22 @@ func (r *RegisteredStruct[T]) Insert(item *T) error {
 			if err != nil {
 				return err
 			}
-			switch fieldValue.Kind() {
+			target := fieldValue
+			if fieldValue.Kind() == reflect.Pointer {
+				target = reflect.New(fieldValue.Type().Elem()).Elem()
+			}
+			switch target.Kind() {
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-				fieldValue.SetInt(nextValue)
+				target.SetInt(nextValue)
 			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-				fieldValue.SetUint(uint64(nextValue))
+				target.SetUint(uint64(nextValue))
 			default:
-				return fmt.Errorf("auto-increment unsupported type %s for %s", fieldValue.Kind(), field.Opts.KeyName)
+				return fmt.Errorf("auto-increment unsupported type %s for %s", target.Kind(), field.Opts.KeyName)
+			}
+			if fieldValue.Kind() == reflect.Pointer {
+				ptr := reflect.New(fieldValue.Type().Elem())
+				ptr.Elem().Set(target)
+				fieldValue.Set(ptr)
 			}
 		}
 
@@ -48,7 +57,14 @@ func (r *RegisteredStruct[T]) Insert(item *T) error {
 		if lastInsertID, err := result.LastInsertId(); err != nil {
 			return fmt.Errorf("auto-incr ID fail %s: %w", r.Name, err)
 		} else {
-			elem.FieldByIndex(field.Index).SetInt(lastInsertID)
+			fieldValue := elem.FieldByIndex(field.Index)
+			if fieldValue.Kind() == reflect.Pointer {
+				ptr := reflect.New(fieldValue.Type().Elem())
+				ptr.Elem().SetInt(lastInsertID)
+				fieldValue.Set(ptr)
+			} else {
+				fieldValue.SetInt(lastInsertID)
+			}
 		}
 	}
 

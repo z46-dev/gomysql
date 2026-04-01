@@ -10,9 +10,14 @@ func SetField(field *RegisteredStructField, value any) UpdateAssignment {
 		panic("SetField requires a valid field")
 	}
 
+	arg, err := normalizeValueForField(*field, value)
+	if err != nil {
+		panic(fmt.Sprintf("SetField failed to normalize value for %s: %v", field.Opts.KeyName, err))
+	}
+
 	return UpdateAssignment{
 		clause: fmt.Sprintf("%s = ?", field.Opts.KeyName),
-		args:   []any{value},
+		args:   []any{arg},
 	}
 }
 

@@ -7,7 +7,6 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"time"
 )
 
 // sqlBool normalizes various SQL bool representations (int, string, []byte) to a Go bool.
@@ -61,79 +60,205 @@ func parseBoolString(s string) (bool, error) {
 	}
 }
 
-func decodeSQLValue(field RegisteredStructField, raw any) (any, error) {
+func sqlInt64(raw any) (int64, error) {
+	switch v := raw.(type) {
+	case nil:
+		return 0, nil
+	case int64:
+		return v, nil
+	case int:
+		return int64(v), nil
+	case int32:
+		return int64(v), nil
+	case int16:
+		return int64(v), nil
+	case int8:
+		return int64(v), nil
+	case uint64:
+		return int64(v), nil
+	case uint:
+		return int64(v), nil
+	case uint32:
+		return int64(v), nil
+	case uint16:
+		return int64(v), nil
+	case uint8:
+		return int64(v), nil
+	case []byte:
+		return strconv.ParseInt(string(v), 10, 64)
+	case string:
+		return strconv.ParseInt(v, 10, 64)
+	default:
+		return 0, fmt.Errorf("cannot convert %T to int64", raw)
+	}
+}
+
+func sqlUint64(raw any) (uint64, error) {
+	switch v := raw.(type) {
+	case nil:
+		return 0, nil
+	case uint64:
+		return v, nil
+	case uint:
+		return uint64(v), nil
+	case uint32:
+		return uint64(v), nil
+	case uint16:
+		return uint64(v), nil
+	case uint8:
+		return uint64(v), nil
+	case int64:
+		return uint64(v), nil
+	case int:
+		return uint64(v), nil
+	case int32:
+		return uint64(v), nil
+	case int16:
+		return uint64(v), nil
+	case int8:
+		return uint64(v), nil
+	case []byte:
+		return strconv.ParseUint(string(v), 10, 64)
+	case string:
+		return strconv.ParseUint(v, 10, 64)
+	default:
+		return 0, fmt.Errorf("cannot convert %T to uint64", raw)
+	}
+}
+
+func sqlFloat64(raw any) (float64, error) {
+	switch v := raw.(type) {
+	case nil:
+		return 0, nil
+	case float64:
+		return v, nil
+	case float32:
+		return float64(v), nil
+	case int64:
+		return float64(v), nil
+	case int:
+		return float64(v), nil
+	case []byte:
+		return strconv.ParseFloat(string(v), 64)
+	case string:
+		return strconv.ParseFloat(v, 64)
+	default:
+		return 0, fmt.Errorf("cannot convert %T to float64", raw)
+	}
+}
+
+func sqlString(raw any) (string, error) {
+	switch v := raw.(type) {
+	case nil:
+		return "", nil
+	case string:
+		return v, nil
+	case []byte:
+		return string(v), nil
+	default:
+		return "", fmt.Errorf("cannot convert %T to string", raw)
+	}
+}
+
+func assignDecodedValue(fieldValue reflect.Value, field RegisteredStructField, raw any) error {
+	if fieldValue.Kind() == reflect.Pointer {
+		if raw == nil {
+			fieldValue.Set(reflect.Zero(fieldValue.Type()))
+			return nil
+		}
+
+		target := reflect.New(fieldValue.Type().Elem())
+		if err := assignDecodedValue(target.Elem(), RegisteredStructField{
+			Opts:         field.Opts,
+			RealName:     field.RealName,
+			Type:         fieldValue.Type().Elem(),
+			Index:        field.Index,
+			InternalType: field.InternalType,
+		}, raw); err != nil {
+			return err
+		}
+		fieldValue.Set(target)
+		return nil
+	}
+
 	switch field.InternalType {
 	case TypeRepInt:
-		return raw.(int64), nil
+		value, err := sqlInt64(raw)
+		if err != nil {
+			return fmt.Errorf("convert %s to int: %w", field.Opts.KeyName, err)
+		}
+		fieldValue.SetInt(value)
 	case TypeRepUint:
-		return raw.(uint64), nil
+		value, err := sqlUint64(raw)
+		if err != nil {
+			return fmt.Errorf("convert %s to uint: %w", field.Opts.KeyName, err)
+		}
+		fieldValue.SetUint(value)
 	case TypeRepString:
-		return raw.(string), nil
+		value, err := sqlString(raw)
+		if err != nil {
+			return fmt.Errorf("convert %s to string: %w", field.Opts.KeyName, err)
+		}
+		fieldValue.SetString(value)
 	case TypeRepBool:
 		boolean, err := sqlBool(raw)
 		if err != nil {
-			return nil, fmt.Errorf("convert %s to bool: %w", field.Opts.KeyName, err)
+			return fmt.Errorf("convert %s to bool: %w", field.Opts.KeyName, err)
 		}
-		return boolean, nil
+		fieldValue.SetBool(boolean)
+	case TypeRepFloat:
+		value, err := sqlFloat64(raw)
+		if err != nil {
+			return fmt.Errorf("convert %s to float: %w", field.Opts.KeyName, err)
+		}
+		fieldValue.SetFloat(value)
 	case TypeRepArrayBlob, TypeRepStructBlob, TypeRepMapBlob:
 		if raw == nil {
-			if field.InternalType == TypeRepArrayBlob && field.Type.Kind() == reflect.Slice {
-				return reflect.Zero(field.Type).Interface(), nil
-			}
-			if field.InternalType == TypeRepStructBlob && field.Type == timeType {
-				return time.Time{}, nil
-			}
+			fieldValue.Set(reflect.Zero(fieldValue.Type()))
+			return nil
 		}
-		if field.InternalType == TypeRepArrayBlob && field.Type.Kind() == reflect.Slice && field.Type.Elem().Kind() == reflect.String {
+		if field.InternalType == TypeRepArrayBlob && fieldValue.Kind() == reflect.Slice && fieldValue.Type().Elem().Kind() == reflect.String {
 			bytesRaw, ok := raw.([]byte)
 			if !ok {
-				return nil, fmt.Errorf("unsupported array blob type %T for field %s", raw, field.Opts.KeyName)
+				return fmt.Errorf("unsupported array blob type %T for field %s", raw, field.Opts.KeyName)
 			}
 			if decoded, handled, err := decodeStringSlice(bytesRaw); err != nil {
-				return nil, fmt.Errorf("decode string slice %s: %w", field.Opts.KeyName, err)
+				return fmt.Errorf("decode string slice %s: %w", field.Opts.KeyName, err)
 			} else if handled {
-				return decoded, nil
+				if decoded == nil {
+					fieldValue.Set(reflect.Zero(fieldValue.Type()))
+					return nil
+				}
+				fieldValue.Set(reflect.ValueOf(decoded))
+				return nil
 			}
 		}
-		if field.InternalType == TypeRepStructBlob && field.Type == timeType {
+		if field.InternalType == TypeRepStructBlob && fieldValue.Type() == timeType {
 			bytesRaw, ok := raw.([]byte)
 			if !ok {
-				return nil, fmt.Errorf("unsupported time blob type %T for field %s", raw, field.Opts.KeyName)
+				return fmt.Errorf("unsupported time blob type %T for field %s", raw, field.Opts.KeyName)
 			}
 			if decoded, handled, err := decodeTimeValue(bytesRaw); err != nil {
-				return nil, fmt.Errorf("decode time %s: %w", field.Opts.KeyName, err)
+				return fmt.Errorf("decode time %s: %w", field.Opts.KeyName, err)
 			} else if handled {
-				return decoded, nil
+				fieldValue.Set(reflect.ValueOf(decoded))
+				return nil
 			}
 		}
-		target := reflect.New(field.Type).Interface()
-		if err := gob.NewDecoder(bytes.NewReader(raw.([]byte))).Decode(target); err != nil {
-			return nil, fmt.Errorf("gob decode %s: %w", field.Opts.KeyName, err)
+		if err := gob.NewDecoder(bytes.NewReader(raw.([]byte))).Decode(fieldValue.Addr().Interface()); err != nil {
+			return fmt.Errorf("gob decode %s: %w", field.Opts.KeyName, err)
 		}
-		return reflect.ValueOf(target).Elem().Interface(), nil
-	case TypeRepFloat:
-		return raw.(float64), nil
-	case TypeRepPointer:
-		if raw == nil {
-			return nil, nil
-		}
-		if field.Type.Elem() == timeType {
-			bytesRaw, ok := raw.([]byte)
-			if !ok {
-				return nil, fmt.Errorf("unsupported time blob type %T for field %s", raw, field.Opts.KeyName)
-			}
-			if decoded, handled, err := decodeTimeValue(bytesRaw); err != nil {
-				return nil, fmt.Errorf("decode time %s: %w", field.Opts.KeyName, err)
-			} else if handled {
-				return &decoded, nil
-			}
-		}
-		target := reflect.New(field.Type.Elem())
-		if err := gob.NewDecoder(bytes.NewReader(raw.([]byte))).Decode(target.Interface()); err != nil {
-			return nil, fmt.Errorf("gob decode %s: %w", field.Opts.KeyName, err)
-		}
-		return target.Interface(), nil
 	default:
-		return nil, fmt.Errorf("unsupported type for field %s", field.Opts.KeyName)
+		return fmt.Errorf("unsupported type for field %s", field.Opts.KeyName)
 	}
+
+	return nil
+}
+
+func decodeSQLValue(field RegisteredStructField, raw any) (any, error) {
+	target := reflect.New(field.Type).Elem()
+	if err := assignDecodedValue(target, field, raw); err != nil {
+		return nil, err
+	}
+	return target.Interface(), nil
 }

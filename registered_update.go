@@ -24,7 +24,11 @@ func (r *RegisteredStruct[T]) Update(item *T) error {
 	}
 
 	if primaryKeyField := r.PrimaryKeyField; primaryKeyField.RealName != "" {
-		values = append(values, elem.FieldByIndex(primaryKeyField.Index).Interface())
+		if val, err := getSQLValueOf(primaryKeyField, elem.FieldByIndex(primaryKeyField.Index)); err != nil {
+			return fmt.Errorf("value conversion %s: %w", primaryKeyField.Opts.KeyName, err)
+		} else {
+			values = append(values, val)
+		}
 	}
 
 	r.db.lock.Lock()

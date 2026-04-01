@@ -5,6 +5,36 @@ import (
 	"reflect"
 )
 
+func resolveInternalType(t reflect.Type) (TypeRepresentation, error) {
+	if t.Kind() == reflect.Pointer {
+		if t.Elem().Kind() == reflect.Pointer {
+			return 0, fmt.Errorf("unsupported nested pointer type %s", t)
+		}
+		return resolveInternalType(t.Elem())
+	}
+
+	switch t.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return TypeRepInt, nil
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return TypeRepUint, nil
+	case reflect.String:
+		return TypeRepString, nil
+	case reflect.Bool:
+		return TypeRepBool, nil
+	case reflect.Array, reflect.Slice:
+		return TypeRepArrayBlob, nil
+	case reflect.Struct:
+		return TypeRepStructBlob, nil
+	case reflect.Float32, reflect.Float64:
+		return TypeRepFloat, nil
+	case reflect.Map:
+		return TypeRepMapBlob, nil
+	default:
+		return 0, fmt.Errorf("unsupported type %s", t.Kind())
+	}
+}
+
 func Register[T any](structInstance T) (registered *RegisteredStruct[T], err error) {
 	var structType reflect.Type = reflect.TypeOf(structInstance)
 
@@ -29,32 +59,9 @@ func Register[T any](structInstance T) (registered *RegisteredStruct[T], err err
 		if tag, ok := field.Tag.Lookup("gomysql"); ok {
 			var opts = mustParseTag(tag)
 
-			var internalType TypeRepresentation
-			switch field.Type.Kind() {
-			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-				internalType = TypeRepInt
-			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-				internalType = TypeRepUint
-			case reflect.String:
-				internalType = TypeRepString
-			case reflect.Bool:
-				internalType = TypeRepBool
-			case reflect.Array, reflect.Slice:
-				internalType = TypeRepArrayBlob
-			case reflect.Struct:
-				internalType = TypeRepStructBlob
-			case reflect.Float32, reflect.Float64:
-				internalType = TypeRepFloat
-			case reflect.Map:
-				internalType = TypeRepMapBlob
-			case reflect.Pointer:
-				if field.Type.Elem().Kind() == reflect.Struct {
-					internalType = TypeRepPointer
-				} else {
-					return nil, fmt.Errorf("unsupported pointer type %s for field %s", field.Type.Elem().Kind(), field.Name)
-				}
-			default:
-				return nil, fmt.Errorf("unsupported type %s for field %s", field.Type.Kind(), field.Name)
+			internalType, err := resolveInternalType(field.Type)
+			if err != nil {
+				return nil, fmt.Errorf("%w for field %s", err, field.Name)
 			}
 
 			registered.Fields = append(registered.Fields, RegisteredStructField{

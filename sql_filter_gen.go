@@ -6,6 +6,48 @@ import (
 	"strings"
 )
 
+func normalizeValueForField(field RegisteredStructField, value any) (any, error) {
+	if value == nil {
+		return nil, nil
+	}
+
+	rv := reflect.ValueOf(value)
+	if rv.Type() == field.Type {
+		return getSQLValueOf(field, rv)
+	}
+
+	baseType := baseTypeOf(field.Type)
+	if rv.Kind() == reflect.Pointer {
+		if rv.IsNil() {
+			return nil, nil
+		}
+		rv = rv.Elem()
+	}
+
+	if rv.Type().AssignableTo(baseType) {
+		return getSQLValueOf(RegisteredStructField{
+			Opts:         field.Opts,
+			RealName:     field.RealName,
+			Type:         baseType,
+			Index:        field.Index,
+			InternalType: field.InternalType,
+		}, rv)
+	}
+
+	if rv.Type().ConvertibleTo(baseType) {
+		converted := rv.Convert(baseType)
+		return getSQLValueOf(RegisteredStructField{
+			Opts:         field.Opts,
+			RealName:     field.RealName,
+			Type:         baseType,
+			Index:        field.Index,
+			InternalType: field.InternalType,
+		}, converted)
+	}
+
+	return value, nil
+}
+
 func NewFilter() *Filter {
 	return &Filter{
 		whereTokens:   []string{},
@@ -43,11 +85,19 @@ func (f *Filter) KeyCmp(key *RegisteredStructField, op SQLOperator, value any) *
 		placeholders := strings.Repeat("?, ", val.Len()-1) + "?"
 		f.whereTokens = append(f.whereTokens, fmt.Sprintf("%s %s (%s)", key.Opts.KeyName, op, placeholders))
 		for i := 0; i < val.Len(); i++ {
-			f.args = append(f.args, val.Index(i).Interface())
+			arg, err := normalizeValueForField(*key, val.Index(i).Interface())
+			if err != nil {
+				panic(fmt.Sprintf("KeyCmp failed to normalize value for %s: %v", key.Opts.KeyName, err))
+			}
+			f.args = append(f.args, arg)
 		}
 	default:
 		f.whereTokens = append(f.whereTokens, fmt.Sprintf("%s %s ?", key.Opts.KeyName, op))
-		f.args = append(f.args, value)
+		arg, err := normalizeValueForField(*key, value)
+		if err != nil {
+			panic(fmt.Sprintf("KeyCmp failed to normalize value for %s: %v", key.Opts.KeyName, err))
+		}
+		f.args = append(f.args, arg)
 	}
 	f.lastWasJoiner = false
 	return f
