@@ -13,6 +13,10 @@ func resolveInternalType(t reflect.Type) (TypeRepresentation, error) {
 		return resolveInternalType(t.Elem())
 	}
 
+	if t == timeType {
+		return TypeRepTime, nil
+	}
+
 	switch t.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return TypeRepInt, nil

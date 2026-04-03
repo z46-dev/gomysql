@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // sqlBool normalizes various SQL bool representations (int, string, []byte) to a Go bool.
@@ -212,6 +213,40 @@ func assignDecodedValue(fieldValue reflect.Value, field RegisteredStructField, r
 			return fmt.Errorf("convert %s to float: %w", field.Opts.KeyName, err)
 		}
 		fieldValue.SetFloat(value)
+	case TypeRepTime:
+		if raw == nil {
+			fieldValue.Set(reflect.Zero(fieldValue.Type()))
+			return nil
+		}
+
+		switch value := raw.(type) {
+		case time.Time:
+			fieldValue.Set(reflect.ValueOf(value.UTC()))
+			return nil
+		case string:
+			parsed, err := parseSQLTimeValue(value)
+			if err != nil {
+				return fmt.Errorf("decode time %s: %w", field.Opts.KeyName, err)
+			}
+			fieldValue.Set(reflect.ValueOf(parsed))
+			return nil
+		case []byte:
+			if decoded, handled, err := decodeTimeValue(value); err != nil {
+				return fmt.Errorf("decode legacy time %s: %w", field.Opts.KeyName, err)
+			} else if handled {
+				fieldValue.Set(reflect.ValueOf(decoded.UTC()))
+				return nil
+			}
+
+			parsed, err := parseSQLTimeValue(string(value))
+			if err != nil {
+				return fmt.Errorf("decode time %s: %w", field.Opts.KeyName, err)
+			}
+			fieldValue.Set(reflect.ValueOf(parsed))
+			return nil
+		default:
+			return fmt.Errorf("unsupported time type %T for field %s", raw, field.Opts.KeyName)
+		}
 	case TypeRepArrayBlob, TypeRepStructBlob, TypeRepMapBlob:
 		if raw == nil {
 			fieldValue.Set(reflect.Zero(fieldValue.Type()))
@@ -229,18 +264,6 @@ func assignDecodedValue(fieldValue reflect.Value, field RegisteredStructField, r
 					fieldValue.Set(reflect.Zero(fieldValue.Type()))
 					return nil
 				}
-				fieldValue.Set(reflect.ValueOf(decoded))
-				return nil
-			}
-		}
-		if field.InternalType == TypeRepStructBlob && fieldValue.Type() == timeType {
-			bytesRaw, ok := raw.([]byte)
-			if !ok {
-				return fmt.Errorf("unsupported time blob type %T for field %s", raw, field.Opts.KeyName)
-			}
-			if decoded, handled, err := decodeTimeValue(bytesRaw); err != nil {
-				return fmt.Errorf("decode time %s: %w", field.Opts.KeyName, err)
-			} else if handled {
 				fieldValue.Set(reflect.ValueOf(decoded))
 				return nil
 			}

@@ -117,3 +117,63 @@ func TestOrderingFilter(t *testing.T) {
 		assert.LessOrEqual(t, results[i-1].Creation.Unix(), results[i].Creation.Unix(), "documents should be ordered by creation time")
 	}
 }
+
+func TestTimeComparisonFilter(t *testing.T) {
+	var (
+		err     error
+		handler *gomysql.RegisteredStruct[Document]
+	)
+
+	if err = gomysql.Begin(":memory:"); err != nil {
+		t.Fatalf("failed to connect to database: %v", err)
+	}
+
+	defer func() {
+		if err := gomysql.Close(); err != nil {
+			t.Fatalf("failed to close database connection: %v", err)
+		}
+	}()
+
+	if handler, err = gomysql.Register(Document{}); err != nil {
+		t.Fatalf("failed to register Document struct: %v", err)
+	}
+
+	base := time.Date(2026, 1, 2, 15, 0, 0, 0, time.UTC)
+	docs := []Document{
+		{Title: "oldest", Creation: base.Add(-2 * time.Hour)},
+		{Title: "older", Creation: base.Add(-1 * time.Hour)},
+		{Title: "newer", Creation: base.Add(1 * time.Hour)},
+		{Title: "newest", Creation: base.Add(2 * time.Hour)},
+	}
+
+	for i := range docs {
+		if err = handler.Insert(&docs[i]); err != nil {
+			t.Fatalf("failed to insert document %d: %v", i, err)
+		}
+	}
+
+	cutoff := base.In(time.FixedZone("EST", -5*60*60))
+
+	older, err := handler.SelectAllWithFilter(
+		gomysql.NewFilter().KeyCmp(handler.FieldByGoName("Creation"), gomysql.OpLessThan, cutoff),
+	)
+	if err != nil {
+		t.Fatalf("failed to select older documents: %v", err)
+	}
+
+	younger, err := handler.SelectAllWithFilter(
+		gomysql.NewFilter().KeyCmp(handler.FieldByGoName("Creation"), gomysql.OpGreaterThan, cutoff),
+	)
+	if err != nil {
+		t.Fatalf("failed to select younger documents: %v", err)
+	}
+
+	assert.Len(t, older, 2, "expected two older documents")
+	assert.Len(t, younger, 2, "expected two younger documents")
+	for _, doc := range older {
+		assert.True(t, doc.Creation.Before(base), "older results should be before cutoff")
+	}
+	for _, doc := range younger {
+		assert.True(t, doc.Creation.After(base), "younger results should be after cutoff")
+	}
+}

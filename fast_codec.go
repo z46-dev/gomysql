@@ -4,12 +4,14 @@ import (
 	"encoding/binary"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 )
 
 const (
 	stringSliceMagic = "GMS1"
 	timeMagic        = "GMT1"
+	sqlTimeLayout    = "2006-01-02T15:04:05.000000000Z"
 )
 
 var timeType = reflect.TypeOf(time.Time{})
@@ -110,4 +112,31 @@ func decodeTimeValue(raw []byte) (time.Time, bool, error) {
 		return time.Time{}, true, err
 	}
 	return value, true, nil
+}
+
+func formatSQLTimeValue(value time.Time) string {
+	return value.UTC().Format(sqlTimeLayout)
+}
+
+func parseSQLTimeValue(raw string) (time.Time, error) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return time.Time{}, nil
+	}
+
+	layouts := []string{
+		sqlTimeLayout,
+		time.RFC3339Nano,
+		"2006-01-02 15:04:05.000000000Z07:00",
+		"2006-01-02 15:04:05.000000000",
+		"2006-01-02 15:04:05",
+	}
+
+	for _, layout := range layouts {
+		if parsed, err := time.Parse(layout, trimmed); err == nil {
+			return parsed.UTC(), nil
+		}
+	}
+
+	return time.Time{}, fmt.Errorf("invalid time format %q", raw)
 }

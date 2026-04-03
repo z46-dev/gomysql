@@ -38,17 +38,12 @@ func getSQLValueOf(field RegisteredStructField, structField reflect.Value) (any,
 		return value.String(), nil
 	case TypeRepBool:
 		return value.Bool(), nil
+	case TypeRepTime:
+		return formatSQLTimeValue(value.Interface().(time.Time)), nil
 	case TypeRepArrayBlob, TypeRepStructBlob, TypeRepMapBlob:
 		fieldBaseType := baseTypeOf(field.Type)
 		if field.InternalType == TypeRepArrayBlob && fieldBaseType.Kind() == reflect.Slice && fieldBaseType.Elem().Kind() == reflect.String {
 			return encodeStringSlice(value.Interface().([]string)), nil
-		}
-		if field.InternalType == TypeRepStructBlob && fieldBaseType == timeType {
-			encoded, err := encodeTimeValue(value.Interface().(time.Time))
-			if err != nil {
-				return nil, fmt.Errorf("encode time %s: %w", field.Opts.KeyName, err)
-			}
-			return encoded, nil
 		}
 		var buf bytes.Buffer
 		if err := gob.NewEncoder(&buf).Encode(value.Interface()); err != nil {

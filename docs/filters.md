@@ -2,6 +2,20 @@
 
 Filters build SQL WHERE clauses with placeholders and arguments.
 
+Supported comparison operators:
+
+- `gomysql.OpEqual`
+- `gomysql.OpNotEqual`
+- `gomysql.OpGreaterThan`
+- `gomysql.OpLessThan`
+- `gomysql.OpGreaterThanOrEqual`
+- `gomysql.OpLessThanOrEqual`
+- `gomysql.OpLike`
+- `gomysql.OpIn`
+- `gomysql.OpNotIn`
+- `gomysql.OpIsNull`
+- `gomysql.OpIsNotNull`
+
 ```go
 filter := gomysql.NewFilter().
 	KeyCmp(handler.FieldByGoName("Title"), gomysql.OpLike, "%report%").
@@ -40,6 +54,36 @@ filter := gomysql.NewFilter().
 	Limit(50).
 	Offset(100)
 ```
+
+## Compare `time.Time` fields
+
+`time.Time` fields are stored as SQL `DATETIME` values, so range filters and ordering work natively in SQL.
+
+```go
+cutoff := time.Now().UTC().Add(-24 * time.Hour)
+
+olderDocs, err := handler.SelectAllWithFilter(
+	gomysql.NewFilter().
+		KeyCmp(handler.FieldByGoName("Creation"), gomysql.OpLessThan, cutoff),
+)
+if err != nil {
+	panic(err)
+}
+
+recentDocs, err := handler.SelectAllWithFilter(
+	gomysql.NewFilter().
+		KeyCmp(handler.FieldByGoName("Creation"), gomysql.OpGreaterThanOrEqual, cutoff).
+		Ordering(handler.FieldByGoName("Creation"), false),
+)
+if err != nil {
+	panic(err)
+}
+
+_ = olderDocs
+_ = recentDocs
+```
+
+Use `UTC()` consistently when writing or filtering timestamps so comparisons stay predictable.
 
 ## Count rows without loading them
 

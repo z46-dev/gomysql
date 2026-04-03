@@ -39,6 +39,12 @@ type foreignKeyInfo struct {
 	To    string
 }
 
+type copyColumnMapping struct {
+	destName  string
+	srcName   string
+	transform func(any) (any, error)
+}
+
 func normalizeIdentifier(name string) string {
 	return strings.ToLower(strings.TrimSpace(name))
 }
@@ -66,6 +72,41 @@ func lookupForeignKeyRef(foreignKeys map[string]foreignKeyInfo, key string) *for
 	}
 
 	return &info
+}
+
+func needsLegacyTimeMigration(srcType string, field RegisteredStructField) bool {
+	return field.InternalType == TypeRepTime && normalizeSQLType(srcType) == normalizeSQLType(typeNameString(TypeRepStructBlob))
+}
+
+func migrateLegacyTimeValue(raw any) (any, error) {
+	if raw == nil {
+		return nil, nil
+	}
+
+	switch value := raw.(type) {
+	case time.Time:
+		return formatSQLTimeValue(value), nil
+	case string:
+		parsed, err := parseSQLTimeValue(value)
+		if err != nil {
+			return nil, err
+		}
+		return formatSQLTimeValue(parsed), nil
+	case []byte:
+		if decoded, handled, err := decodeTimeValue(value); err != nil {
+			return nil, err
+		} else if handled {
+			return formatSQLTimeValue(decoded), nil
+		}
+
+		parsed, err := parseSQLTimeValue(string(value))
+		if err != nil {
+			return nil, err
+		}
+		return formatSQLTimeValue(parsed), nil
+	default:
+		return nil, fmt.Errorf("unsupported legacy time value %T", raw)
+	}
 }
 
 func (d *Driver) tableColumns(table string) ([]columnInfo, error) {
@@ -287,8 +328,10 @@ func (r *RegisteredStruct[T]) rebuildTable(existingByKey map[string]columnInfo, 
 	createSQL := strings.Replace(r.createTableSQL, fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s", r.Name), fmt.Sprintf("CREATE TABLE %s", tempName), 1)
 
 	var (
-		destCols []string
-		srcCols  []string
+		destCols          []string
+		srcCols           []string
+		mappings          []copyColumnMapping
+		requiresTransform bool
 	)
 
 	for _, field := range r.Fields {
@@ -298,6 +341,15 @@ func (r *RegisteredStruct[T]) rebuildTable(existingByKey map[string]columnInfo, 
 			if oldCol, ok := existingByKey[oldKey]; ok {
 				destCols = append(destCols, destName)
 				srcCols = append(srcCols, oldCol.Name)
+				mapping := copyColumnMapping{
+					destName: destName,
+					srcName:  oldCol.Name,
+				}
+				if needsLegacyTimeMigration(oldCol.Type, field) {
+					mapping.transform = migrateLegacyTimeValue
+					requiresTransform = true
+				}
+				mappings = append(mappings, mapping)
 			}
 			continue
 		}
@@ -305,6 +357,15 @@ func (r *RegisteredStruct[T]) rebuildTable(existingByKey map[string]columnInfo, 
 		if col, ok := existingByKey[destKey]; ok {
 			destCols = append(destCols, destName)
 			srcCols = append(srcCols, col.Name)
+			mapping := copyColumnMapping{
+				destName: destName,
+				srcName:  col.Name,
+			}
+			if needsLegacyTimeMigration(col.Type, field) {
+				mapping.transform = migrateLegacyTimeValue
+				requiresTransform = true
+			}
+			mappings = append(mappings, mapping)
 		}
 	}
 
@@ -324,10 +385,17 @@ func (r *RegisteredStruct[T]) rebuildTable(existingByKey map[string]columnInfo, 
 	}
 
 	if len(destCols) > 0 {
-		insertSQL := fmt.Sprintf("INSERT INTO %s (%s) SELECT %s FROM %s;", tempName, strings.Join(destCols, ", "), strings.Join(srcCols, ", "), r.Name)
-		if _, err := tx.Exec(insertSQL); err != nil {
-			_ = tx.Rollback()
-			return fmt.Errorf("copy data into %s: %w", tempName, err)
+		if requiresTransform {
+			if err := r.copyRowsWithTransform(tx, tempName, mappings); err != nil {
+				_ = tx.Rollback()
+				return err
+			}
+		} else {
+			insertSQL := fmt.Sprintf("INSERT INTO %s (%s) SELECT %s FROM %s;", tempName, strings.Join(destCols, ", "), strings.Join(srcCols, ", "), r.Name)
+			if _, err := tx.Exec(insertSQL); err != nil {
+				_ = tx.Rollback()
+				return fmt.Errorf("copy data into %s: %w", tempName, err)
+			}
 		}
 	}
 
@@ -343,6 +411,63 @@ func (r *RegisteredStruct[T]) rebuildTable(existingByKey map[string]columnInfo, 
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit migration %s: %w", r.Name, err)
+	}
+
+	return nil
+}
+
+func (r *RegisteredStruct[T]) copyRowsWithTransform(tx *sql.Tx, tempName string, mappings []copyColumnMapping) error {
+	destCols := make([]string, 0, len(mappings))
+	srcCols := make([]string, 0, len(mappings))
+	for _, mapping := range mappings {
+		destCols = append(destCols, mapping.destName)
+		srcCols = append(srcCols, mapping.srcName)
+	}
+
+	querySQL := fmt.Sprintf("SELECT %s FROM %s;", strings.Join(srcCols, ", "), r.Name)
+	rows, err := tx.Query(querySQL)
+	if err != nil {
+		return fmt.Errorf("query rows for migration %s: %w", r.Name, err)
+	}
+	defer rows.Close()
+
+	insertSQL := fmt.Sprintf(
+		"INSERT INTO %s (%s) VALUES (%s);",
+		tempName,
+		strings.Join(destCols, ", "),
+		strings.Repeat("?, ", len(destCols)-1)+"?",
+	)
+
+	values := make([]any, len(mappings))
+	scanArgs := make([]any, len(mappings))
+	for i := range values {
+		scanArgs[i] = &values[i]
+	}
+
+	for rows.Next() {
+		if err := rows.Scan(scanArgs...); err != nil {
+			return fmt.Errorf("scan rows for migration %s: %w", r.Name, err)
+		}
+
+		args := make([]any, len(mappings))
+		for i, mapping := range mappings {
+			args[i] = values[i]
+			if mapping.transform != nil {
+				transformed, err := mapping.transform(values[i])
+				if err != nil {
+					return fmt.Errorf("transform column %s during migration %s: %w", mapping.srcName, r.Name, err)
+				}
+				args[i] = transformed
+			}
+		}
+
+		if _, err := tx.Exec(insertSQL, args...); err != nil {
+			return fmt.Errorf("insert transformed row into %s: %w", tempName, err)
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("iterate rows for migration %s: %w", r.Name, err)
 	}
 
 	return nil

@@ -35,6 +35,7 @@ const (
 	TypeRepFloat
 	TypeRepMapBlob
 	TypeRepPointer
+	TypeRepTime
 )
 
 func typeNameString(t TypeRepresentation) string {
@@ -51,6 +52,8 @@ func typeNameString(t TypeRepresentation) string {
 		return "BLOB"
 	case TypeRepFloat:
 		return "FLOAT"
+	case TypeRepTime:
+		return "DATETIME"
 	default:
 		return "UNKNOWN"
 	}
