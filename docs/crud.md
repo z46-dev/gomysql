@@ -35,6 +35,40 @@ if err := handler.Delete(1); err != nil {
 }
 ```
 
+## Count rows
+
+```go
+total, err := handler.Count()
+if err != nil {
+	panic(err)
+}
+```
+
+## Count rows with a filter
+
+```go
+published, err := handler.CountWithFilter(
+	gomysql.NewFilter().
+		KeyCmp(handler.FieldByGoName("Published"), gomysql.OpEqual, true),
+)
+if err != nil {
+	panic(err)
+}
+```
+
+## Delete rows with a filter
+
+```go
+deleted, err := handler.DeleteWithFilter(
+	gomysql.NewFilter().
+		KeyCmp(handler.FieldByGoName("Published"), gomysql.OpEqual, false),
+)
+if err != nil {
+	panic(err)
+}
+_ = deleted
+```
+
 ## List primary keys
 
 ```go

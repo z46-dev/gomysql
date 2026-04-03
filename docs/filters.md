@@ -40,3 +40,31 @@ filter := gomysql.NewFilter().
 	Limit(50).
 	Offset(100)
 ```
+
+## Count rows without loading them
+
+```go
+count, err := handler.CountWithFilter(
+	gomysql.NewFilter().
+		KeyCmp(handler.FieldByGoName("Published"), gomysql.OpEqual, true),
+)
+if err != nil {
+	panic(err)
+}
+```
+
+## Delete the oldest rows quickly
+
+```go
+deleted, err := handler.DeleteWithFilter(
+	gomysql.NewFilter().
+		Ordering(handler.FieldByGoName("Creation"), true).
+		Limit(100),
+)
+if err != nil {
+	panic(err)
+}
+_ = deleted
+```
+
+`DeleteWithFilter` uses the primary key under the hood, so ordered and limited deletes work for cases like pruning the oldest rows from a large table.

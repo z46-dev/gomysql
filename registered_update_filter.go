@@ -198,3 +198,27 @@ func buildFilterClause(filter *Filter) (string, []any, error) {
 	filterString = strings.TrimSpace(filterString)
 	return filterString, filterArgs, nil
 }
+
+func buildWhereClause(filter *Filter) (string, []any, error) {
+	if filter == nil {
+		return "", nil, nil
+	}
+
+	if filter.lastWasJoiner && len(filter.whereTokens) > 0 {
+		return "", nil, fmt.Errorf("failed to build filter: filter ends with a joiner; expected a condition")
+	}
+
+	if len(filter.whereTokens) == 0 {
+		return "", nil, nil
+	}
+
+	return "WHERE " + strings.Join(filter.whereTokens, " "), filter.args, nil
+}
+
+func filterHasWhere(filter *Filter) bool {
+	return filter != nil && len(filter.whereTokens) > 0
+}
+
+func filterHasSelectionModifiers(filter *Filter) bool {
+	return filter != nil && (filter.orderByClause != "" || filter.limitClause != "" || filter.offsetClause != "")
+}

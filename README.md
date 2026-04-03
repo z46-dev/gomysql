@@ -55,6 +55,27 @@ func main() {
 
 You can now call functions on the `handle` to perform database operations.
 
+For larger tables, filters can also be used for efficient row counts and pruning the oldest rows without loading full records:
+
+```go
+total, err := handle.Count()
+if err != nil {
+    panic(err)
+}
+
+deleted, err := handle.DeleteWithFilter(
+    gomysql.NewFilter().
+        Ordering(handle.FieldByGoName("CreatedAt"), true).
+        Limit(100),
+)
+if err != nil {
+    panic(err)
+}
+
+_ = total
+_ = deleted
+```
+
 ## Contributing
 
 This was thrown together in a few hours, so there are likely many improvements that can be made. If you have suggestions or improvements, feel free to open an issue or submit a pull request. I would love to see this package grow.
