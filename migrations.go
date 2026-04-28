@@ -188,30 +188,30 @@ func (d *Driver) tableForeignKeys(table string) (map[string]foreignKeyInfo, erro
 }
 
 func (r *RegisteredStruct[T]) Migrate(opts MigrationOptions) (*MigrationReport, error) {
-	if r.db == nil {
+	if r.driver == nil {
 		return nil, ErrDatabaseNotInitialized
 	}
 
-	r.db.lock.Lock()
-	defer r.db.lock.Unlock()
+	r.driver.lock.Lock()
+	defer r.driver.lock.Unlock()
 
 	report := &MigrationReport{
 		Table:          r.Name,
 		RenamedColumns: make(map[string]string),
 	}
 
-	existingColumns, err := r.db.tableColumns(r.Name)
+	existingColumns, err := r.driver.tableColumns(r.Name)
 	if err != nil {
 		return report, err
 	}
 
-	existingForeignKeys, err := r.db.tableForeignKeys(r.Name)
+	existingForeignKeys, err := r.driver.tableForeignKeys(r.Name)
 	if err != nil {
 		return report, err
 	}
 
 	if len(existingColumns) == 0 {
-		if _, err := r.db.db.Exec(r.createTableSQL); err != nil {
+		if _, err := r.driver.db.Exec(r.createTableSQL); err != nil {
 			return report, fmt.Errorf("create table %s: %w", r.Name, err)
 		}
 		for _, field := range r.Fields {
@@ -307,14 +307,14 @@ func (r *RegisteredStruct[T]) Migrate(opts MigrationOptions) (*MigrationReport, 
 	for _, name := range report.AddedColumns {
 		field := desiredByKey[normalizeIdentifier(name)]
 		columnSQL := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s;", r.Name, columnDefinition(field, false))
-		if _, err := r.db.db.Exec(columnSQL); err != nil {
+		if _, err := r.driver.db.Exec(columnSQL); err != nil {
 			return report, fmt.Errorf("add column %s: %w", field.Opts.KeyName, err)
 		}
 
 		if field.Opts.Unique {
 			indexName := fmt.Sprintf("%s_%s_unique", r.Name, field.Opts.KeyName)
 			indexSQL := fmt.Sprintf("CREATE UNIQUE INDEX IF NOT EXISTS %s ON %s(%s);", indexName, r.Name, field.Opts.KeyName)
-			if _, err := r.db.db.Exec(indexSQL); err != nil {
+			if _, err := r.driver.db.Exec(indexSQL); err != nil {
 				return report, fmt.Errorf("add unique index %s: %w", indexName, err)
 			}
 		}
@@ -369,7 +369,7 @@ func (r *RegisteredStruct[T]) rebuildTable(existingByKey map[string]columnInfo, 
 		}
 	}
 
-	tx, err := r.db.db.Begin()
+	tx, err := r.driver.db.Begin()
 	if err != nil {
 		return fmt.Errorf("begin migration %s: %w", r.Name, err)
 	}

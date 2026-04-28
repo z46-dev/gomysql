@@ -39,7 +39,7 @@ func resolveInternalType(t reflect.Type) (TypeRepresentation, error) {
 	}
 }
 
-func Register[T any](structInstance T) (registered *RegisteredStruct[T], err error) {
+func Register[T any](driver *Driver, structInstance T) (registered *RegisteredStruct[T], err error) {
 	var structType reflect.Type = reflect.TypeOf(structInstance)
 
 	if structType.Kind() == reflect.Pointer {
@@ -52,7 +52,7 @@ func Register[T any](structInstance T) (registered *RegisteredStruct[T], err err
 	}
 
 	registered = &RegisteredStruct[T]{
-		db:     DB,
+		driver: driver,
 		Name:   structType.Name(),
 		Type:   structType,
 		Fields: make([]RegisteredStructField, 0),

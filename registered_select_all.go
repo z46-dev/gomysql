@@ -7,14 +7,14 @@ import (
 )
 
 func (r *RegisteredStruct[T]) selectAll(sql string, args ...any) ([]*T, error) {
-	if r.db == nil {
+	if r.driver == nil {
 		return nil, ErrDatabaseNotInitialized
 	}
 
-	r.db.lock.Lock()
-	defer r.db.lock.Unlock()
+	r.driver.lock.Lock()
+	defer r.driver.lock.Unlock()
 
-	rows, err := r.db.db.Query(sql, args...)
+	rows, err := r.driver.db.Query(sql, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all from %s: %w", r.Name, err)
 	}
@@ -68,7 +68,7 @@ func (r *RegisteredStruct[T]) SelectAll() ([]*T, error) {
 }
 
 func (r *RegisteredStruct[T]) SelectAllWithFilter(filter *Filter) ([]*T, error) {
-	if r.db == nil {
+	if r.driver == nil {
 		return nil, ErrDatabaseNotInitialized
 	}
 

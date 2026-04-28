@@ -14,17 +14,18 @@ const (
 	sqlTimeLayout    = "2006-01-02T15:04:05.000000000Z"
 )
 
-var timeType = reflect.TypeOf(time.Time{})
+var timeType = reflect.TypeFor[time.Time]()
 
+// appendUvarint appends the varint encoding of v to dst and returns the resulting slice.
 func appendUvarint(dst []byte, v uint64) []byte {
 	var buf [binary.MaxVarintLen64]byte
-	n := binary.PutUvarint(buf[:], v)
-	return append(dst, buf[:n]...)
+	return append(dst, buf[:binary.PutUvarint(buf[:], v)]...)
 }
 
+// encodeStringSlice encodes a slice of strings into a byte slice with a specific format.
 func encodeStringSlice(values []string) []byte {
 	if values == nil {
-		buf := make([]byte, 0, len(stringSliceMagic)+1)
+		var buf []byte = make([]byte, 0, len(stringSliceMagic)+1)
 		buf = append(buf, stringSliceMagic...)
 		buf = append(buf, 1)
 		return buf
@@ -62,6 +63,7 @@ func decodeStringSlice(raw []byte) ([]string, bool, error) {
 	if n <= 0 {
 		return nil, true, fmt.Errorf("invalid string slice length")
 	}
+
 	idx += n
 
 	if count == 0 {
@@ -73,14 +75,17 @@ func decodeStringSlice(raw []byte) ([]string, bool, error) {
 		if idx >= len(raw) {
 			return nil, true, fmt.Errorf("invalid string slice data")
 		}
+
 		itemLen, n := binary.Uvarint(raw[idx:])
 		if n <= 0 {
 			return nil, true, fmt.Errorf("invalid string slice item length")
 		}
+
 		idx += n
 		if idx+int(itemLen) > len(raw) {
 			return nil, true, fmt.Errorf("invalid string slice item data")
 		}
+
 		result = append(result, string(raw[idx:idx+int(itemLen)]))
 		idx += int(itemLen)
 	}
@@ -97,6 +102,7 @@ func encodeTimeValue(value time.Time) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	buf := make([]byte, 0, len(timeMagic)+len(raw))
 	buf = append(buf, timeMagic...)
 	buf = append(buf, raw...)
@@ -107,10 +113,12 @@ func decodeTimeValue(raw []byte) (time.Time, bool, error) {
 	if len(raw) < len(timeMagic) || string(raw[:len(timeMagic)]) != timeMagic {
 		return time.Time{}, false, nil
 	}
+
 	var value time.Time
 	if err := value.UnmarshalBinary(raw[len(timeMagic):]); err != nil {
 		return time.Time{}, true, err
 	}
+
 	return value, true, nil
 }
 

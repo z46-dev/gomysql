@@ -3,14 +3,14 @@ package gomysql
 import "fmt"
 
 func (r *RegisteredStruct[T]) Delete(primaryKeyValue any) error {
-	if r.db == nil {
+	if r.driver == nil {
 		return ErrDatabaseNotInitialized
 	}
 
-	r.db.lock.Lock()
-	defer r.db.lock.Unlock()
+	r.driver.lock.Lock()
+	defer r.driver.lock.Unlock()
 
-	if _, err := r.db.db.Exec(r.deleteSQL, primaryKeyValue); err != nil {
+	if _, err := r.driver.db.Exec(r.deleteSQL, primaryKeyValue); err != nil {
 		return fmt.Errorf("delete fail %s: %w", r.Name, err)
 	}
 
@@ -18,7 +18,7 @@ func (r *RegisteredStruct[T]) Delete(primaryKeyValue any) error {
 }
 
 func (r *RegisteredStruct[T]) DeleteWithFilter(filter *Filter) (int64, error) {
-	if r.db == nil {
+	if r.driver == nil {
 		return 0, ErrDatabaseNotInitialized
 	}
 
@@ -27,10 +27,10 @@ func (r *RegisteredStruct[T]) DeleteWithFilter(filter *Filter) (int64, error) {
 		return 0, err
 	}
 
-	r.db.lock.Lock()
-	defer r.db.lock.Unlock()
+	r.driver.lock.Lock()
+	defer r.driver.lock.Unlock()
 
-	result, err := r.db.db.Exec(sql, args...)
+	result, err := r.driver.db.Exec(sql, args...)
 	if err != nil {
 		return 0, fmt.Errorf("delete with filter fail %s: %w", r.Name, err)
 	}

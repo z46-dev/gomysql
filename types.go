@@ -14,7 +14,7 @@ type RegisteredStructField struct {
 }
 
 type RegisteredStruct[T any] struct {
-	db                                                                                *Driver
+	driver                                                                            *Driver
 	Name                                                                              string
 	Type                                                                              reflect.Type
 	Fields                                                                            []RegisteredStructField

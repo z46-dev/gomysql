@@ -16,30 +16,35 @@ type LegacyTimeItem struct {
 	CreatedAt time.Time `gomysql:"created_at"`
 }
 
-func withRootTestDB(t *testing.T, fn func()) {
+func withRootTestDB(t *testing.T, fn func(driver *Driver)) {
 	t.Helper()
 
-	if err := Begin(":memory:"); err != nil {
+	var (
+		driver *Driver
+		err    error
+	)
+
+	if driver, err = Begin(":memory:"); err != nil {
 		t.Fatalf("failed to connect to database: %v", err)
 	}
 
 	defer func() {
-		if err := Close(); err != nil {
+		if err = driver.Close(); err != nil {
 			t.Fatalf("failed to close database connection: %v", err)
 		}
 	}()
 
-	fn()
+	fn(driver)
 }
 
 func TestTimeFieldUsesDateTimeColumn(t *testing.T) {
-	withRootTestDB(t, func() {
-		handler, err := Register(TimeColumnItem{})
+	withRootTestDB(t, func(driver *Driver) {
+		handler, err := Register(driver, TimeColumnItem{})
 		if err != nil {
 			t.Fatalf("failed to register struct: %v", err)
 		}
 
-		cols, err := handler.db.tableColumns(handler.Name)
+		cols, err := handler.driver.tableColumns(handler.Name)
 		if err != nil {
 			t.Fatalf("failed to inspect columns: %v", err)
 		}
@@ -58,8 +63,8 @@ func TestTimeFieldUsesDateTimeColumn(t *testing.T) {
 }
 
 func TestMigrateLegacyTimeBlobColumn(t *testing.T) {
-	withRootTestDB(t, func() {
-		if _, err := DB.db.Exec("CREATE TABLE LegacyTimeItem (id INTEGER PRIMARY KEY, created_at BLOB);"); err != nil {
+	withRootTestDB(t, func(driver *Driver) {
+		if _, err := driver.db.Exec("CREATE TABLE LegacyTimeItem (id INTEGER PRIMARY KEY, created_at BLOB);"); err != nil {
 			t.Fatalf("failed to create legacy table: %v", err)
 		}
 
@@ -69,11 +74,11 @@ func TestMigrateLegacyTimeBlobColumn(t *testing.T) {
 			t.Fatalf("failed to encode legacy time: %v", err)
 		}
 
-		if _, err := DB.db.Exec("INSERT INTO LegacyTimeItem (id, created_at) VALUES (?, ?);", 1, encoded); err != nil {
+		if _, err := driver.db.Exec("INSERT INTO LegacyTimeItem (id, created_at) VALUES (?, ?);", 1, encoded); err != nil {
 			t.Fatalf("failed to insert legacy row: %v", err)
 		}
 
-		handler, err := Register(LegacyTimeItem{})
+		handler, err := Register(driver, LegacyTimeItem{})
 		if err != nil {
 			t.Fatalf("failed to register legacy struct: %v", err)
 		}

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/z46-dev/gomysql"
 )
 
 type Document struct {
@@ -23,6 +24,23 @@ func twoDocsMatch(t *testing.T, doc1, doc2 *Document) {
 	assert.ElementsMatch(t, doc1.Tags, doc2.Tags, "Tags should match")
 	assert.WithinDuration(t, doc1.Creation, doc2.Creation, time.Second, "Creation times should be within 1 second")
 	assert.Equal(t, doc1.BooleanField, doc2.BooleanField, "Boolean fields should match")
+}
+
+func withTestDB(t testing.TB, fn func(*gomysql.Driver)) {
+	t.Helper()
+
+	driver, err := gomysql.Begin(":memory:")
+	if err != nil {
+		t.Fatalf("failed to connect to database: %v", err)
+	}
+
+	defer func() {
+		if err := driver.Close(); err != nil {
+			t.Fatalf("failed to close database connection: %v", err)
+		}
+	}()
+
+	fn(driver)
 }
 
 type MultiLayerStructEmbeddedStruct struct {

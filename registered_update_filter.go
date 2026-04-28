@@ -53,7 +53,7 @@ func SetDiv(field *RegisteredStructField, value any) UpdateAssignment {
 }
 
 func (r *RegisteredStruct[T]) UpdateWithFilter(filter *Filter, assignments ...UpdateAssignment) (int64, error) {
-	if r.db == nil {
+	if r.driver == nil {
 		return 0, ErrDatabaseNotInitialized
 	}
 
@@ -75,10 +75,10 @@ func (r *RegisteredStruct[T]) UpdateWithFilter(filter *Filter, assignments ...Up
 
 	args := append(setArgs, filterArgs...)
 
-	r.db.lock.Lock()
-	defer r.db.lock.Unlock()
+	r.driver.lock.Lock()
+	defer r.driver.lock.Unlock()
 
-	result, err := r.db.db.Exec(sql, args...)
+	result, err := r.driver.db.Exec(sql, args...)
 	if err != nil {
 		return 0, fmt.Errorf("update with filter fail %s: %w", r.Name, err)
 	}
@@ -92,7 +92,7 @@ func (r *RegisteredStruct[T]) UpdateWithFilter(filter *Filter, assignments ...Up
 }
 
 func (r *RegisteredStruct[T]) UpdateWithFilterReturning(filter *Filter, returning []*RegisteredStructField, assignments ...UpdateAssignment) ([]ReturnedValues, error) {
-	if r.db == nil {
+	if r.driver == nil {
 		return nil, ErrDatabaseNotInitialized
 	}
 
@@ -126,10 +126,10 @@ func (r *RegisteredStruct[T]) UpdateWithFilterReturning(filter *Filter, returnin
 
 	args := append(setArgs, filterArgs...)
 
-	r.db.lock.Lock()
-	defer r.db.lock.Unlock()
+	r.driver.lock.Lock()
+	defer r.driver.lock.Unlock()
 
-	rows, err := r.db.db.Query(sql, args...)
+	rows, err := r.driver.db.Query(sql, args...)
 	if err != nil {
 		return nil, fmt.Errorf("update returning fail %s: %w", r.Name, err)
 	}

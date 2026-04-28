@@ -3,14 +3,14 @@ package gomysql
 import "fmt"
 
 func (r *RegisteredStruct[T]) List() ([]any, error) {
-	if r.db == nil {
+	if r.driver == nil {
 		return nil, ErrDatabaseNotInitialized
 	}
 
-	r.db.lock.Lock()
-	defer r.db.lock.Unlock()
+	r.driver.lock.Lock()
+	defer r.driver.lock.Unlock()
 
-	rows, err := r.db.db.Query(r.listSQL)
+	rows, err := r.driver.db.Query(r.listSQL)
 	if err != nil {
 		return nil, fmt.Errorf("list fail %s: %w", r.Name, err)
 	}

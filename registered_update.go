@@ -6,7 +6,7 @@ import (
 )
 
 func (r *RegisteredStruct[T]) Update(item *T) error {
-	if r.db == nil {
+	if r.driver == nil {
 		return ErrDatabaseNotInitialized
 	}
 
@@ -31,10 +31,10 @@ func (r *RegisteredStruct[T]) Update(item *T) error {
 		}
 	}
 
-	r.db.lock.Lock()
-	defer r.db.lock.Unlock()
+	r.driver.lock.Lock()
+	defer r.driver.lock.Unlock()
 
-	if _, err := r.db.db.Exec(r.updateSQL, values...); err != nil {
+	if _, err := r.driver.db.Exec(r.updateSQL, values...); err != nil {
 		return fmt.Errorf("update fail %s: %w", r.Name, err)
 	}
 

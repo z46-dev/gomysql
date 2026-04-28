@@ -6,7 +6,7 @@ import (
 )
 
 func (r *RegisteredStruct[T]) Insert(item *T) error {
-	if r.db == nil {
+	if r.driver == nil {
 		return ErrDatabaseNotInitialized
 	}
 
@@ -15,8 +15,8 @@ func (r *RegisteredStruct[T]) Insert(item *T) error {
 		elem   = reflect.ValueOf(item).Elem()
 	)
 
-	r.db.lock.Lock()
-	defer r.db.lock.Unlock()
+	r.driver.lock.Lock()
+	defer r.driver.lock.Unlock()
 
 	for _, field := range r.insertOrdered {
 		fieldValue := elem.FieldByIndex(field.Index)
@@ -51,7 +51,7 @@ func (r *RegisteredStruct[T]) Insert(item *T) error {
 		}
 	}
 
-	if result, err := r.db.db.Exec(r.insertSQL, values...); err != nil {
+	if result, err := r.driver.db.Exec(r.insertSQL, values...); err != nil {
 		return fmt.Errorf("insert fail %s: %w", r.Name, err)
 	} else if field := r.PrimaryKeyField; field.Opts.PrimaryKey && field.Opts.AutoIncr {
 		if lastInsertID, err := result.LastInsertId(); err != nil {
@@ -74,7 +74,7 @@ func (r *RegisteredStruct[T]) Insert(item *T) error {
 func (r *RegisteredStruct[T]) nextAutoIncrementValue(field RegisteredStructField) (int64, error) {
 	query := fmt.Sprintf("SELECT COALESCE(MAX(%s), 0) + 1 FROM %s;", field.Opts.KeyName, r.Name)
 	var next int64
-	if err := r.db.db.QueryRow(query).Scan(&next); err != nil {
+	if err := r.driver.db.QueryRow(query).Scan(&next); err != nil {
 		return 0, fmt.Errorf("auto-increment query %s: %w", field.Opts.KeyName, err)
 	}
 	return next, nil

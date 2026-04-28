@@ -7,7 +7,7 @@ import (
 )
 
 func (r *RegisteredStruct[T]) Select(primaryKeyValue any) (item *T, err error) {
-	if r.db == nil {
+	if r.driver == nil {
 		return nil, ErrDatabaseNotInitialized
 	}
 
@@ -23,10 +23,10 @@ func (r *RegisteredStruct[T]) Select(primaryKeyValue any) (item *T, err error) {
 		scanArgs[i] = &values[i]
 	}
 
-	r.db.lock.Lock()
-	defer r.db.lock.Unlock()
+	r.driver.lock.Lock()
+	defer r.driver.lock.Unlock()
 
-	row := r.db.db.QueryRow(r.selectSQL, primaryKeyValue)
+	row := r.driver.db.QueryRow(r.selectSQL, primaryKeyValue)
 	if err = row.Scan(scanArgs...); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil

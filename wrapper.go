@@ -7,20 +7,13 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-var DB *Driver
-
 type Driver struct {
 	db       *sql.DB
 	lock     *sync.RWMutex
 	filePath string
 }
 
-func Begin(dbPath string) (err error) {
-	if DB != nil {
-		err = ErrDatabaseInitialized
-		return
-	}
-
+func Begin(dbPath string) (driver *Driver, err error) {
 	var db *sql.DB
 
 	if db, err = sql.Open("sqlite", dbPath); err != nil {
@@ -34,7 +27,7 @@ func Begin(dbPath string) (err error) {
 			return
 		}
 
-		DB = &Driver{
+		driver = &Driver{
 			db:       db,
 			lock:     &sync.RWMutex{},
 			filePath: dbPath,
@@ -44,18 +37,13 @@ func Begin(dbPath string) (err error) {
 	return
 }
 
-func Close() (err error) {
-	if DB == nil {
-		err = ErrDatabaseNotInitialized
+func (d *Driver) Close() (err error) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+	if err = d.db.Close(); err != nil {
 		return
 	}
 
-	DB.lock.Lock()
-	defer DB.lock.Unlock()
-	if err = DB.db.Close(); err != nil {
-		return
-	}
-
-	DB = nil
+	d = nil
 	return
 }

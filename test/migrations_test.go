@@ -8,25 +8,9 @@ import (
 	v2 "github.com/z46-dev/gomysql/test/migrationv2"
 )
 
-func withTestDB(t *testing.T, fn func()) {
-	t.Helper()
-
-	if err := gomysql.Begin(":memory:"); err != nil {
-		t.Fatalf("failed to connect to database: %v", err)
-	}
-
-	defer func() {
-		if err := gomysql.Close(); err != nil {
-			t.Fatalf("failed to close database connection: %v", err)
-		}
-	}()
-
-	fn()
-}
-
 func TestMigrationAddColumn(t *testing.T) {
-	withTestDB(t, func() {
-		v1Handler, err := gomysql.Register(v1.AddItem{})
+	withTestDB(t, func(driver *gomysql.Driver) {
+		v1Handler, err := gomysql.Register(driver, v1.AddItem{})
 		if err != nil {
 			t.Fatalf("failed to register v1 struct: %v", err)
 		}
@@ -36,7 +20,7 @@ func TestMigrationAddColumn(t *testing.T) {
 			t.Fatalf("failed to insert v1 item: %v", err)
 		}
 
-		v2Handler, err := gomysql.Register(v2.AddItem{})
+		v2Handler, err := gomysql.Register(driver, v2.AddItem{})
 		if err != nil {
 			t.Fatalf("failed to register v2 struct: %v", err)
 		}
@@ -57,8 +41,8 @@ func TestMigrationAddColumn(t *testing.T) {
 }
 
 func TestMigrationDropColumn(t *testing.T) {
-	withTestDB(t, func() {
-		v1Handler, err := gomysql.Register(v1.DropItem{})
+	withTestDB(t, func(driver *gomysql.Driver) {
+		v1Handler, err := gomysql.Register(driver, v1.DropItem{})
 		if err != nil {
 			t.Fatalf("failed to register v1 struct: %v", err)
 		}
@@ -68,7 +52,7 @@ func TestMigrationDropColumn(t *testing.T) {
 			t.Fatalf("failed to insert v1 item: %v", err)
 		}
 
-		v2Handler, err := gomysql.Register(v2.DropItem{})
+		v2Handler, err := gomysql.Register(driver, v2.DropItem{})
 		if err != nil {
 			t.Fatalf("failed to register v2 struct: %v", err)
 		}
@@ -97,8 +81,8 @@ func TestMigrationDropColumn(t *testing.T) {
 }
 
 func TestMigrationChangeType(t *testing.T) {
-	withTestDB(t, func() {
-		v1Handler, err := gomysql.Register(v1.TypeItem{})
+	withTestDB(t, func(driver *gomysql.Driver) {
+		v1Handler, err := gomysql.Register(driver, v1.TypeItem{})
 		if err != nil {
 			t.Fatalf("failed to register v1 struct: %v", err)
 		}
@@ -108,7 +92,7 @@ func TestMigrationChangeType(t *testing.T) {
 			t.Fatalf("failed to insert v1 item: %v", err)
 		}
 
-		v2Handler, err := gomysql.Register(v2.TypeItem{})
+		v2Handler, err := gomysql.Register(driver, v2.TypeItem{})
 		if err != nil {
 			t.Fatalf("failed to register v2 struct: %v", err)
 		}
@@ -138,13 +122,13 @@ func TestMigrationChangeType(t *testing.T) {
 }
 
 func TestForeignKeyConstraint(t *testing.T) {
-	withTestDB(t, func() {
-		parentHandler, err := gomysql.Register(v2.Parent{})
+	withTestDB(t, func(driver *gomysql.Driver) {
+		parentHandler, err := gomysql.Register(driver, v2.Parent{})
 		if err != nil {
 			t.Fatalf("failed to register parent struct: %v", err)
 		}
 
-		childHandler, err := gomysql.Register(v2.Child{})
+		childHandler, err := gomysql.Register(driver, v2.Child{})
 		if err != nil {
 			t.Fatalf("failed to register child struct: %v", err)
 		}
@@ -170,13 +154,13 @@ func TestForeignKeyConstraint(t *testing.T) {
 }
 
 func TestMigrationAddForeignKey(t *testing.T) {
-	withTestDB(t, func() {
-		parentHandler, err := gomysql.Register(v1.Parent{})
+	withTestDB(t, func(driver *gomysql.Driver) {
+		parentHandler, err := gomysql.Register(driver, v1.Parent{})
 		if err != nil {
 			t.Fatalf("failed to register parent struct: %v", err)
 		}
 
-		v1ChildHandler, err := gomysql.Register(v1.Child{})
+		v1ChildHandler, err := gomysql.Register(driver, v1.Child{})
 		if err != nil {
 			t.Fatalf("failed to register v1 child struct: %v", err)
 		}
@@ -191,7 +175,7 @@ func TestMigrationAddForeignKey(t *testing.T) {
 			t.Fatalf("failed to insert v1 child: %v", err)
 		}
 
-		v2ChildHandler, err := gomysql.Register(v2.Child{})
+		v2ChildHandler, err := gomysql.Register(driver, v2.Child{})
 		if err != nil {
 			t.Fatalf("failed to register v2 child struct: %v", err)
 		}

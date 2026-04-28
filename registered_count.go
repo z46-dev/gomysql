@@ -7,7 +7,7 @@ func (r *RegisteredStruct[T]) Count() (int64, error) {
 }
 
 func (r *RegisteredStruct[T]) CountWithFilter(filter *Filter) (int64, error) {
-	if r.db == nil {
+	if r.driver == nil {
 		return 0, ErrDatabaseNotInitialized
 	}
 
@@ -16,11 +16,11 @@ func (r *RegisteredStruct[T]) CountWithFilter(filter *Filter) (int64, error) {
 		return 0, err
 	}
 
-	r.db.lock.Lock()
-	defer r.db.lock.Unlock()
+	r.driver.lock.Lock()
+	defer r.driver.lock.Unlock()
 
 	var count int64
-	if err := r.db.db.QueryRow(sql, args...).Scan(&count); err != nil {
+	if err := r.driver.db.QueryRow(sql, args...).Scan(&count); err != nil {
 		return 0, fmt.Errorf("count fail %s: %w", r.Name, err)
 	}
 
