@@ -85,6 +85,25 @@ _ = recentDocs
 
 Use `UTC()` consistently when writing or filtering timestamps so comparisons stay predictable.
 
+## Compare `time.Duration` fields
+
+`time.Duration` fields are stored as SQL `INTEGER` nanoseconds, so numeric range filters and ordering also work natively in SQL.
+
+```go
+slowJobs, err := handler.SelectAllWithFilter(
+	gomysql.NewFilter().
+		KeyCmp(handler.FieldByGoName("Timeout"), gomysql.OpGreaterThanOrEqual, 30*time.Second).
+		Ordering(handler.FieldByGoName("Timeout"), false),
+)
+if err != nil {
+	panic(err)
+}
+
+_ = slowJobs
+```
+
+Durations round-trip as `time.Duration`, but if you inspect the raw SQL column directly you will see nanoseconds.
+
 ## Count rows without loading them
 
 ```go

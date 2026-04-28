@@ -207,3 +207,55 @@ func TestMigrationAddForeignKey(t *testing.T) {
 		}
 	})
 }
+
+func TestMigrationChangeForeignKeyDeleteAction(t *testing.T) {
+	withTestDB(t, func(driver *gomysql.Driver) {
+		parentHandler, err := gomysql.Register(driver, v1.Parent{})
+		if err != nil {
+			t.Fatalf("failed to register parent struct: %v", err)
+		}
+
+		v1ChildHandler, err := gomysql.Register(driver, v1.CascadeChild{})
+		if err != nil {
+			t.Fatalf("failed to register v1 child struct: %v", err)
+		}
+
+		parent := &v1.Parent{Name: "parent"}
+		if err := parentHandler.Insert(parent); err != nil {
+			t.Fatalf("failed to insert parent: %v", err)
+		}
+
+		child := &v1.CascadeChild{ParentID: parent.ID}
+		if err := v1ChildHandler.Insert(child); err != nil {
+			t.Fatalf("failed to insert v1 child: %v", err)
+		}
+
+		v2ChildHandler, err := gomysql.Register(driver, v2.CascadeChild{})
+		if err != nil {
+			t.Fatalf("failed to register v2 child struct: %v", err)
+		}
+
+		report, err := v2ChildHandler.Migrate(gomysql.MigrationOptions{AllowDestructive: true})
+		if err != nil {
+			t.Fatalf("failed to migrate foreign key delete action: %v", err)
+		}
+
+		if !report.Rebuilt {
+			t.Fatalf("expected rebuild for foreign key delete action migration")
+		}
+
+		if len(report.ChangedColumns) != 1 || report.ChangedColumns[0] != "parent_id" {
+			t.Fatalf("expected changed column to be parent_id, got %v", report.ChangedColumns)
+		}
+
+		if err := parentHandler.Delete(parent.ID); err != nil {
+			t.Fatalf("expected parent delete to cascade after migration: %v", err)
+		}
+
+		if got, err := v2ChildHandler.Select(child.ID); err != nil {
+			t.Fatalf("failed to select child after cascaded delete: %v", err)
+		} else if got != nil {
+			t.Fatalf("expected migrated child to be deleted by cascade")
+		}
+	})
+}

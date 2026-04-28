@@ -21,7 +21,7 @@ type User struct {
 }
 ```
 
-Foreign keys are declared in the same tag with `fkey:StructGoName.mysqlFieldName`:
+Foreign keys are declared in the same tag with `fkey:StructGoName.mysqlFieldName`. Add `ondelete:cascade` to opt into cascading child deletes:
 
 ```go
 type Team struct {
@@ -32,7 +32,14 @@ type Player struct {
     ID     int `gomysql:"id,primary,increment"`
     TeamID int `gomysql:"team_id,fkey:Team.id"`
 }
+
+type Match struct {
+    ID     int `gomysql:"id,primary,increment"`
+    TeamID int `gomysql:"team_id,fkey:Team.id,ondelete:cascade"`
+}
 ```
+
+Without `ondelete:cascade`, deleting a parent row while children still reference it will fail under SQLite foreign key enforcement.
 
 Now, we should register this struct to set up the database tables:
 
@@ -54,6 +61,8 @@ func main() {
 ```
 
 You can now call functions on the `handle` to perform database operations.
+
+`time.Time` fields are stored as SQL `DATETIME` values, and `time.Duration` fields are stored as SQL `INTEGER` nanoseconds, so both can be filtered and ordered directly in SQL.
 
 For larger tables, filters can also be used for efficient row counts and pruning the oldest rows without loading full records:
 

@@ -20,6 +20,7 @@ Supported options:
 - `unique` adds a UNIQUE constraint.
 - `notnull` adds a NOT NULL constraint.
 - `fkey:StructGoName.mysqlFieldName` adds a foreign key reference to another registered table.
+- `ondelete:cascade` adds `ON DELETE CASCADE` to the field's foreign key.
 
 Example:
 
@@ -33,6 +34,17 @@ type Session struct {
 	UserID int `gomysql:"user_id,fkey:User.id"`
 }
 ```
+
+To delete child rows automatically when the parent row is removed:
+
+```go
+type AuditLog struct {
+	ID     int `gomysql:"id,primary,increment"`
+	UserID int `gomysql:"user_id,fkey:User.id,ondelete:cascade"`
+}
+```
+
+If you omit `ondelete:cascade`, SQLite will reject parent deletes while child rows still reference them.
 
 ## Supported field kinds
 

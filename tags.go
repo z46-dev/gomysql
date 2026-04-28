@@ -8,7 +8,14 @@ import (
 type ForeignKeyRef struct {
 	TableName  string
 	ColumnName string
+	OnDelete   ForeignKeyAction
 }
+
+type ForeignKeyAction string
+
+const (
+	ForeignKeyActionCascade ForeignKeyAction = "CASCADE"
+)
 
 type SQLTagOpts struct {
 	KeyName    string
@@ -24,6 +31,8 @@ func mustParseTag(tag string) (output SQLTagOpts) {
 	if len(parts) == 0 {
 		panic(fmt.Sprintf("invalid tag format: %s", tag))
 	}
+
+	var onDelete ForeignKeyAction
 
 	if len(parts) == 1 {
 		output.KeyName = strings.TrimSpace(parts[0])
@@ -51,6 +60,22 @@ func mustParseTag(tag string) (output SQLTagOpts) {
 					output.ForeignKey = &ForeignKeyRef{
 						TableName:  strings.TrimSpace(target[0]),
 						ColumnName: strings.TrimSpace(target[1]),
+						OnDelete:   onDelete,
+					}
+					continue
+				}
+
+				if strings.HasPrefix(part, "ondelete:") {
+					action := strings.ToLower(strings.TrimSpace(strings.TrimPrefix(part, "ondelete:")))
+					switch action {
+					case "cascade":
+						onDelete = ForeignKeyActionCascade
+					default:
+						panic(fmt.Sprintf("invalid foreign key delete action: %s", part))
+					}
+
+					if output.ForeignKey != nil {
+						output.ForeignKey.OnDelete = onDelete
 					}
 					continue
 				}
@@ -62,6 +87,10 @@ func mustParseTag(tag string) (output SQLTagOpts) {
 
 	if output.KeyName == "" {
 		panic(fmt.Sprintf("invalid tag format: %s", tag))
+	}
+
+	if onDelete != "" && output.ForeignKey == nil {
+		panic(fmt.Sprintf("foreign key delete action requires fkey: %s", tag))
 	}
 
 	return

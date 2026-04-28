@@ -26,6 +26,9 @@ func columnDefinition(field RegisteredStructField, includePrimaryKey bool) strin
 
 	if field.Opts.HasForeignKey() {
 		parts = append(parts, fmt.Sprintf("REFERENCES %s(%s)", field.Opts.ForeignKey.TableName, field.Opts.ForeignKey.ColumnName))
+		if field.Opts.ForeignKey.OnDelete != "" {
+			parts = append(parts, fmt.Sprintf("ON DELETE %s", field.Opts.ForeignKey.OnDelete))
+		}
 	}
 
 	return strings.Join(parts, " ")

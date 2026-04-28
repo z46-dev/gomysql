@@ -25,3 +25,8 @@ type Child struct {
 	ID       int `gomysql:"id,primary,increment"`
 	ParentID int `gomysql:"parent_id,fkey:Parent.id"`
 }
+
+type CascadeChild struct {
+	ID       int `gomysql:"id,primary,increment"`
+	ParentID int `gomysql:"parent_id,fkey:Parent.id,ondelete:cascade"`
+}

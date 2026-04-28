@@ -34,9 +34,10 @@ type columnInfo struct {
 }
 
 type foreignKeyInfo struct {
-	From  string
-	Table string
-	To    string
+	From     string
+	Table    string
+	To       string
+	OnDelete string
 }
 
 type copyColumnMapping struct {
@@ -53,6 +54,15 @@ func normalizeSQLType(typeName string) string {
 	return strings.ToUpper(strings.Join(strings.Fields(typeName), " "))
 }
 
+func normalizeForeignKeyAction(action string) string {
+	normalized := normalizeSQLType(action)
+	if normalized == "" {
+		return "NO ACTION"
+	}
+
+	return normalized
+}
+
 func foreignKeyRefsEqual(info *foreignKeyInfo, ref *ForeignKeyRef) bool {
 	switch {
 	case info == nil && ref == nil:
@@ -61,7 +71,8 @@ func foreignKeyRefsEqual(info *foreignKeyInfo, ref *ForeignKeyRef) bool {
 		return false
 	default:
 		return normalizeIdentifier(info.Table) == normalizeIdentifier(ref.TableName) &&
-			normalizeIdentifier(info.To) == normalizeIdentifier(ref.ColumnName)
+			normalizeIdentifier(info.To) == normalizeIdentifier(ref.ColumnName) &&
+			normalizeForeignKeyAction(info.OnDelete) == normalizeForeignKeyAction(string(ref.OnDelete))
 	}
 }
 
@@ -174,9 +185,10 @@ func (d *Driver) tableForeignKeys(table string) (map[string]foreignKeyInfo, erro
 		}
 
 		foreignKeys[normalizeIdentifier(from)] = foreignKeyInfo{
-			From:  from,
-			Table: refTable,
-			To:    to,
+			From:     from,
+			Table:    refTable,
+			To:       to,
+			OnDelete: onDelete,
 		}
 	}
 
