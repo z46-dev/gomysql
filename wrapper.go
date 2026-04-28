@@ -47,3 +47,10 @@ func (d *Driver) Close() (err error) {
 	d = nil
 	return
 }
+
+func (d *Driver) GetFilePath() (path string) {
+	d.lock.RLock()
+	defer d.lock.RUnlock()
+	path = d.filePath
+	return
+}
