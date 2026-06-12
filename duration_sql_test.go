@@ -1,4 +1,4 @@
-package gomysql
+package gosqlite
 
 import (
 	"strings"
@@ -7,8 +7,8 @@ import (
 )
 
 type DurationColumnItem struct {
-	ID      int           `gomysql:"id,primary"`
-	Timeout time.Duration `gomysql:"timeout"`
+	ID      int           `gosqlite:"id,primary"`
+	Timeout time.Duration `gosqlite:"timeout"`
 }
 
 func TestDurationFieldUsesIntegerColumn(t *testing.T) {

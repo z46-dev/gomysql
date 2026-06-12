@@ -1,32 +1,32 @@
 package migrationv1
 
 type AddItem struct {
-	ID   int    `gomysql:"id,primary,increment"`
-	Name string `gomysql:"name"`
+	ID   int    `gosqlite:"id,primary,increment"`
+	Name string `gosqlite:"name"`
 }
 
 type DropItem struct {
-	ID   int    `gomysql:"id,primary,increment"`
-	Name string `gomysql:"name"`
-	Age  int    `gomysql:"age"`
+	ID   int    `gosqlite:"id,primary,increment"`
+	Name string `gosqlite:"name"`
+	Age  int    `gosqlite:"age"`
 }
 
 type TypeItem struct {
-	ID     int `gomysql:"id,primary,increment"`
-	Active int `gomysql:"active"`
+	ID     int `gosqlite:"id,primary,increment"`
+	Active int `gosqlite:"active"`
 }
 
 type Parent struct {
-	ID   int    `gomysql:"id,primary,increment"`
-	Name string `gomysql:"name"`
+	ID   int    `gosqlite:"id,primary,increment"`
+	Name string `gosqlite:"name"`
 }
 
 type Child struct {
-	ID       int `gomysql:"id,primary,increment"`
-	ParentID int `gomysql:"parent_id"`
+	ID       int `gosqlite:"id,primary,increment"`
+	ParentID int `gosqlite:"parent_id"`
 }
 
 type CascadeChild struct {
-	ID       int `gomysql:"id,primary,increment"`
-	ParentID int `gomysql:"parent_id,fkey:Parent.id"`
+	ID       int `gosqlite:"id,primary,increment"`
+	ParentID int `gosqlite:"parent_id,fkey:Parent.id"`
 }

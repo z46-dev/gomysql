@@ -1,4 +1,4 @@
-# gomysql docs
+# gosqlite docs
 
 This folder contains short guides for common workflows:
 

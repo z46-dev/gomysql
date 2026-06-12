@@ -1,41 +1,41 @@
-# gomysql package
+# gosqlite package
 
-When I make some of my projects, I use a MySQL database. I realized I ended up writing very similar code for each project to connect to the database, execute queries, and handle results. To avoid this repetition, I created the `gomysql` package. It utilizes go's `reflect` package to handle different types of structs to create tables, and execute a basic insert, select, update, delete, and list operations.
+When I make some of my projects, I use a SQLite database. I realized I ended up writing very similar code for each project to connect to the database, execute queries, and handle results. To avoid this repetition, I created the `gosqlite` package. It utilizes go's `reflect` package to handle different types of structs to create tables, and execute a basic insert, select, update, delete, and list operations.
 
 # Usage
 
-To use the `gomysql` package, you need to import it in your Go project. Here's a basic example of how to use it:
+To use the `gosqlite` package, you need to import it in your Go project. Here's a basic example of how to use it:
 
 ```go
-import "github.com/z46-dev/gomysql"
+import "github.com/z46-dev/gosqlite"
 ```
 
 Now, let's create a struct that represents a table in the database. This package uses custom struct tags to define table structure, and its fields. Here's an example of a struct that represents a `User` table:
 
 ```go
 type User struct {
-    Username string     `gomysql:"username,primary,unique"`
-    Password string     `gomysql:"password"`
-    Email    string     `gomysql:"email,unique"`
-    CreatedAt time.Time `gomysql:"creation"`
+    Username string     `gosqlite:"username,primary,unique"`
+    Password string     `gosqlite:"password"`
+    Email    string     `gosqlite:"email,unique"`
+    CreatedAt time.Time `gosqlite:"creation"`
 }
 ```
 
-Foreign keys are declared in the same tag with `fkey:StructGoName.mysqlFieldName`. Add `ondelete:cascade` to opt into cascading child deletes:
+Foreign keys are declared in the same tag with `fkey:StructGoName.SQLiteFieldName`. Add `ondelete:cascade` to opt into cascading child deletes:
 
 ```go
 type Team struct {
-    ID int `gomysql:"id,primary,increment"`
+    ID int `gosqlite:"id,primary,increment"`
 }
 
 type Player struct {
-    ID     int `gomysql:"id,primary,increment"`
-    TeamID int `gomysql:"team_id,fkey:Team.id"`
+    ID     int `gosqlite:"id,primary,increment"`
+    TeamID int `gosqlite:"team_id,fkey:Team.id"`
 }
 
 type Match struct {
-    ID     int `gomysql:"id,primary,increment"`
-    TeamID int `gomysql:"team_id,fkey:Team.id,ondelete:cascade"`
+    ID     int `gosqlite:"id,primary,increment"`
+    TeamID int `gosqlite:"team_id,fkey:Team.id,ondelete:cascade"`
 }
 ```
 
@@ -46,15 +46,15 @@ Now, we should register this struct to set up the database tables:
 ```go
 func main() {
     var (
-        handle *gomysql.RegisteredStruct[User]
+        handle *gosqlite.RegisteredStruct[User]
         err    error
     )
 
-    if err = gomysql.Begin(":memory:"); err != nil {
+    if err = gosqlite.Begin(":memory:"); err != nil {
         panic(err)
     }
 
-    if handle, err = gomysql.Register(User{}); err != nil {
+    if handle, err = gosqlite.Register(User{}); err != nil {
         panic(err)
     }
 }
@@ -73,7 +73,7 @@ if err != nil {
 }
 
 deleted, err := handle.DeleteWithFilter(
-    gomysql.NewFilter().
+    gosqlite.NewFilter().
         Ordering(handle.FieldByGoName("CreatedAt"), true).
         Limit(100),
 )

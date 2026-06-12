@@ -48,8 +48,8 @@ if err != nil {
 
 ```go
 published, err := handler.CountWithFilter(
-	gomysql.NewFilter().
-		KeyCmp(handler.FieldByGoName("Published"), gomysql.OpEqual, true),
+	gosqlite.NewFilter().
+		KeyCmp(handler.FieldByGoName("Published"), gosqlite.OpEqual, true),
 )
 if err != nil {
 	panic(err)
@@ -60,8 +60,8 @@ if err != nil {
 
 ```go
 deleted, err := handler.DeleteWithFilter(
-	gomysql.NewFilter().
-		KeyCmp(handler.FieldByGoName("Published"), gomysql.OpEqual, false),
+	gosqlite.NewFilter().
+		KeyCmp(handler.FieldByGoName("Published"), gosqlite.OpEqual, false),
 )
 if err != nil {
 	panic(err)

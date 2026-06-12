@@ -4,23 +4,23 @@ Filters build SQL WHERE clauses with placeholders and arguments.
 
 Supported comparison operators:
 
-- `gomysql.OpEqual`
-- `gomysql.OpNotEqual`
-- `gomysql.OpGreaterThan`
-- `gomysql.OpLessThan`
-- `gomysql.OpGreaterThanOrEqual`
-- `gomysql.OpLessThanOrEqual`
-- `gomysql.OpLike`
-- `gomysql.OpIn`
-- `gomysql.OpNotIn`
-- `gomysql.OpIsNull`
-- `gomysql.OpIsNotNull`
+- `gosqlite.OpEqual`
+- `gosqlite.OpNotEqual`
+- `gosqlite.OpGreaterThan`
+- `gosqlite.OpLessThan`
+- `gosqlite.OpGreaterThanOrEqual`
+- `gosqlite.OpLessThanOrEqual`
+- `gosqlite.OpLike`
+- `gosqlite.OpIn`
+- `gosqlite.OpNotIn`
+- `gosqlite.OpIsNull`
+- `gosqlite.OpIsNotNull`
 
 ```go
-filter := gomysql.NewFilter().
-	KeyCmp(handler.FieldByGoName("Title"), gomysql.OpLike, "%report%").
+filter := gosqlite.NewFilter().
+	KeyCmp(handler.FieldByGoName("Title"), gosqlite.OpLike, "%report%").
 	And().
-	KeyCmp(handler.FieldByGoName("Published"), gomysql.OpEqual, true)
+	KeyCmp(handler.FieldByGoName("Published"), gosqlite.OpEqual, true)
 
 docs, err := handler.SelectAllWithFilter(filter)
 ```
@@ -28,28 +28,28 @@ docs, err := handler.SelectAllWithFilter(filter)
 ## Grouping
 
 ```go
-filter := gomysql.NewFilter().
+filter := gosqlite.NewFilter().
 	OpenGroup().
-	KeyCmp(handler.FieldByGoName("Status"), gomysql.OpEqual, "draft").
+	KeyCmp(handler.FieldByGoName("Status"), gosqlite.OpEqual, "draft").
 	Or().
-	KeyCmp(handler.FieldByGoName("Status"), gomysql.OpEqual, "review").
+	KeyCmp(handler.FieldByGoName("Status"), gosqlite.OpEqual, "review").
 	CloseGroup().
 	And().
-	KeyCmp(handler.FieldByGoName("Owner"), gomysql.OpEqual, "alice")
+	KeyCmp(handler.FieldByGoName("Owner"), gosqlite.OpEqual, "alice")
 ```
 
 ## IN and NOT IN
 
 ```go
-filter := gomysql.NewFilter().
-	KeyCmp(handler.FieldByGoName("ID"), gomysql.OpIn, []int{1, 2, 3})
+filter := gosqlite.NewFilter().
+	KeyCmp(handler.FieldByGoName("ID"), gosqlite.OpIn, []int{1, 2, 3})
 ```
 
 ## Ordering, limit, and offset
 
 ```go
-filter := gomysql.NewFilter().
-	KeyCmp(handler.FieldByGoName("Score"), gomysql.OpGreaterThanOrEqual, 10).
+filter := gosqlite.NewFilter().
+	KeyCmp(handler.FieldByGoName("Score"), gosqlite.OpGreaterThanOrEqual, 10).
 	Ordering(handler.FieldByGoName("Score"), false).
 	Limit(50).
 	Offset(100)
@@ -63,16 +63,16 @@ filter := gomysql.NewFilter().
 cutoff := time.Now().UTC().Add(-24 * time.Hour)
 
 olderDocs, err := handler.SelectAllWithFilter(
-	gomysql.NewFilter().
-		KeyCmp(handler.FieldByGoName("Creation"), gomysql.OpLessThan, cutoff),
+	gosqlite.NewFilter().
+		KeyCmp(handler.FieldByGoName("Creation"), gosqlite.OpLessThan, cutoff),
 )
 if err != nil {
 	panic(err)
 }
 
 recentDocs, err := handler.SelectAllWithFilter(
-	gomysql.NewFilter().
-		KeyCmp(handler.FieldByGoName("Creation"), gomysql.OpGreaterThanOrEqual, cutoff).
+	gosqlite.NewFilter().
+		KeyCmp(handler.FieldByGoName("Creation"), gosqlite.OpGreaterThanOrEqual, cutoff).
 		Ordering(handler.FieldByGoName("Creation"), false),
 )
 if err != nil {
@@ -91,8 +91,8 @@ Use `UTC()` consistently when writing or filtering timestamps so comparisons sta
 
 ```go
 slowJobs, err := handler.SelectAllWithFilter(
-	gomysql.NewFilter().
-		KeyCmp(handler.FieldByGoName("Timeout"), gomysql.OpGreaterThanOrEqual, 30*time.Second).
+	gosqlite.NewFilter().
+		KeyCmp(handler.FieldByGoName("Timeout"), gosqlite.OpGreaterThanOrEqual, 30*time.Second).
 		Ordering(handler.FieldByGoName("Timeout"), false),
 )
 if err != nil {
@@ -108,8 +108,8 @@ Durations round-trip as `time.Duration`, but if you inspect the raw SQL column d
 
 ```go
 count, err := handler.CountWithFilter(
-	gomysql.NewFilter().
-		KeyCmp(handler.FieldByGoName("Published"), gomysql.OpEqual, true),
+	gosqlite.NewFilter().
+		KeyCmp(handler.FieldByGoName("Published"), gosqlite.OpEqual, true),
 )
 if err != nil {
 	panic(err)
@@ -120,7 +120,7 @@ if err != nil {
 
 ```go
 deleted, err := handler.DeleteWithFilter(
-	gomysql.NewFilter().
+	gosqlite.NewFilter().
 		Ordering(handler.FieldByGoName("Creation"), true).
 		Limit(100),
 )

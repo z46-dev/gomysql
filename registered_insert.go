@@ -1,4 +1,4 @@
-package gomysql
+package gosqlite
 
 import (
 	"fmt"

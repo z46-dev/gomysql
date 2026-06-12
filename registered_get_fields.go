@@ -1,4 +1,4 @@
-package gomysql
+package gosqlite
 
 func (r *RegisteredStruct[T]) FieldBySQLName(sqlName string) *RegisteredStructField {
 	for _, p := range r.Fields {

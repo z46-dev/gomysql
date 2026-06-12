@@ -3,27 +3,27 @@ package test
 import (
 	"testing"
 
-	"github.com/z46-dev/gomysql"
+	"github.com/z46-dev/gosqlite"
 )
 
 type PrimaryKeyIncrementDoc struct {
-	ID   int    `gomysql:"id,primary,increment"`
-	Name string `gomysql:"name,unique"`
+	ID   int    `gosqlite:"id,primary,increment"`
+	Name string `gosqlite:"name,unique"`
 }
 
 type SecondaryKeyIncrementDoc struct {
-	Name string `gomysql:"name,primary,unique"`
-	Age  int    `gomysql:"age,unique,increment"`
+	Name string `gosqlite:"name,primary,unique"`
+	Age  int    `gosqlite:"age,unique,increment"`
 }
 
 func TestPKeyIncrement(t *testing.T) {
-	withTestDB(t, func(driver *gomysql.Driver) {
+	withTestDB(t, func(driver *gosqlite.Driver) {
 		var (
 			err     error
-			handler *gomysql.RegisteredStruct[PrimaryKeyIncrementDoc]
+			handler *gosqlite.RegisteredStruct[PrimaryKeyIncrementDoc]
 		)
 
-		if handler, err = gomysql.Register(driver, PrimaryKeyIncrementDoc{}); err != nil {
+		if handler, err = gosqlite.Register(driver, PrimaryKeyIncrementDoc{}); err != nil {
 			t.Fatalf("failed to register Document struct: %v", err)
 		}
 
@@ -72,13 +72,13 @@ func TestPKeyIncrement(t *testing.T) {
 }
 
 func TestSKeyIncrement(t *testing.T) {
-	withTestDB(t, func(driver *gomysql.Driver) {
+	withTestDB(t, func(driver *gosqlite.Driver) {
 		var (
 			err     error
-			handler *gomysql.RegisteredStruct[SecondaryKeyIncrementDoc]
+			handler *gosqlite.RegisteredStruct[SecondaryKeyIncrementDoc]
 		)
 
-		if handler, err = gomysql.Register(driver, SecondaryKeyIncrementDoc{}); err != nil {
+		if handler, err = gosqlite.Register(driver, SecondaryKeyIncrementDoc{}); err != nil {
 			t.Fatalf("failed to register Document struct: %v", err)
 		}
 

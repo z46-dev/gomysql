@@ -3,37 +3,37 @@ package test
 import (
 	"testing"
 
-	"github.com/z46-dev/gomysql"
+	"github.com/z46-dev/gosqlite"
 )
 
 type RestrictParent struct {
-	ID   int    `gomysql:"id,primary,increment"`
-	Name string `gomysql:"name"`
+	ID   int    `gosqlite:"id,primary,increment"`
+	Name string `gosqlite:"name"`
 }
 
 type RestrictChild struct {
-	ID       int `gomysql:"id,primary,increment"`
-	ParentID int `gomysql:"parent_id,fkey:RestrictParent.id"`
+	ID       int `gosqlite:"id,primary,increment"`
+	ParentID int `gosqlite:"parent_id,fkey:RestrictParent.id"`
 }
 
 type CascadeParent struct {
-	ID   int    `gomysql:"id,primary,increment"`
-	Name string `gomysql:"name"`
+	ID   int    `gosqlite:"id,primary,increment"`
+	Name string `gosqlite:"name"`
 }
 
 type CascadeChild struct {
-	ID       int `gomysql:"id,primary,increment"`
-	ParentID int `gomysql:"parent_id,fkey:CascadeParent.id,ondelete:cascade"`
+	ID       int `gosqlite:"id,primary,increment"`
+	ParentID int `gosqlite:"parent_id,fkey:CascadeParent.id,ondelete:cascade"`
 }
 
 func TestForeignKeyDeleteRestrictedByDefault(t *testing.T) {
-	withTestDB(t, func(driver *gomysql.Driver) {
-		parentHandler, err := gomysql.Register(driver, RestrictParent{})
+	withTestDB(t, func(driver *gosqlite.Driver) {
+		parentHandler, err := gosqlite.Register(driver, RestrictParent{})
 		if err != nil {
 			t.Fatalf("failed to register parent struct: %v", err)
 		}
 
-		childHandler, err := gomysql.Register(driver, RestrictChild{})
+		childHandler, err := gosqlite.Register(driver, RestrictChild{})
 		if err != nil {
 			t.Fatalf("failed to register child struct: %v", err)
 		}
@@ -61,13 +61,13 @@ func TestForeignKeyDeleteRestrictedByDefault(t *testing.T) {
 }
 
 func TestForeignKeyCascadeDelete(t *testing.T) {
-	withTestDB(t, func(driver *gomysql.Driver) {
-		parentHandler, err := gomysql.Register(driver, CascadeParent{})
+	withTestDB(t, func(driver *gosqlite.Driver) {
+		parentHandler, err := gosqlite.Register(driver, CascadeParent{})
 		if err != nil {
 			t.Fatalf("failed to register parent struct: %v", err)
 		}
 
-		childHandler, err := gomysql.Register(driver, CascadeChild{})
+		childHandler, err := gosqlite.Register(driver, CascadeChild{})
 		if err != nil {
 			t.Fatalf("failed to register child struct: %v", err)
 		}

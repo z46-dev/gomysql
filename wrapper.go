@@ -1,4 +1,4 @@
-package gomysql
+package gosqlite
 
 import (
 	"context"
@@ -23,7 +23,7 @@ type beginConfig struct {
 	maxIdleConns int
 }
 
-const gomysqlForeignKeysHookParam = "_gomysql_fk_hook"
+const gosqliteForeignKeysHookParam = "_gosqlite_fk_hook"
 
 var registerSQLiteHookOnce sync.Once
 
@@ -113,7 +113,7 @@ func withForeignKeysHook(dsn string) string {
 		sep = ""
 	}
 
-	return dsn + sep + gomysqlForeignKeysHookParam + "=1"
+	return dsn + sep + gosqliteForeignKeysHookParam + "=1"
 }
 
 func hasForeignKeysHook(dsn string) bool {
@@ -127,7 +127,7 @@ func hasForeignKeysHook(dsn string) bool {
 		return false
 	}
 
-	for _, value := range values[gomysqlForeignKeysHookParam] {
+	for _, value := range values[gosqliteForeignKeysHookParam] {
 		if value == "1" {
 			return true
 		}

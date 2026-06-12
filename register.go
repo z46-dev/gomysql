@@ -1,4 +1,4 @@
-package gomysql
+package gosqlite
 
 import (
 	"fmt"
@@ -60,7 +60,7 @@ func Register[T any](driver *Driver, structInstance T) (registered *RegisteredSt
 
 	for i := range structType.NumField() {
 		var field reflect.StructField = structType.Field(i)
-		if tag, ok := field.Tag.Lookup("gomysql"); ok {
+		if tag, ok := field.Tag.Lookup("gosqlite"); ok {
 			var opts = mustParseTag(tag)
 
 			internalType, err := resolveInternalType(field.Type)

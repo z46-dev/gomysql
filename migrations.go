@@ -1,4 +1,4 @@
-package gomysql
+package gosqlite
 
 import (
 	"database/sql"
@@ -336,7 +336,7 @@ func (r *RegisteredStruct[T]) Migrate(opts MigrationOptions) (*MigrationReport, 
 }
 
 func (r *RegisteredStruct[T]) rebuildTable(existingByKey map[string]columnInfo, renameNewToOld map[string]string) error {
-	tempName := fmt.Sprintf("%s__gomysql_tmp_%d", r.Name, time.Now().UnixNano())
+	tempName := fmt.Sprintf("%s__gosqlite_tmp_%d", r.Name, time.Now().UnixNano())
 	createSQL := strings.Replace(r.createTableSQL, fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s", r.Name), fmt.Sprintf("CREATE TABLE %s", tempName), 1)
 
 	var (

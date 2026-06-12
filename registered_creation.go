@@ -1,4 +1,4 @@
-package gomysql
+package gosqlite
 
 func (r *RegisteredStruct[T]) runCreation() (err error) {
 	if r.driver == nil {

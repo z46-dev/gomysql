@@ -7,17 +7,17 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/z46-dev/gomysql"
+	"github.com/z46-dev/gosqlite"
 )
 
 func TestFilters(t *testing.T) {
-	withTestDB(t, func(driver *gomysql.Driver) {
+	withTestDB(t, func(driver *gosqlite.Driver) {
 		var (
 			err     error
-			handler *gomysql.RegisteredStruct[Document]
+			handler *gosqlite.RegisteredStruct[Document]
 		)
 
-		if handler, err = gomysql.Register(driver, Document{}); err != nil {
+		if handler, err = gosqlite.Register(driver, Document{}); err != nil {
 			t.Fatalf("failed to register Document struct: %v", err)
 		}
 
@@ -43,7 +43,7 @@ func TestFilters(t *testing.T) {
 		}
 
 		var results []*Document
-		if results, err = handler.SelectAllWithFilter(gomysql.NewFilter().KeyCmp(handler.FieldByGoName("Title"), gomysql.OpLike, "%even%")); err != nil {
+		if results, err = handler.SelectAllWithFilter(gosqlite.NewFilter().KeyCmp(handler.FieldByGoName("Title"), gosqlite.OpLike, "%even%")); err != nil {
 			t.Fatalf("failed to select all documents with filter: %v", err)
 		}
 
@@ -56,13 +56,13 @@ func TestFilters(t *testing.T) {
 }
 
 func TestOrderingFilter(t *testing.T) {
-	withTestDB(t, func(driver *gomysql.Driver) {
+	withTestDB(t, func(driver *gosqlite.Driver) {
 		var (
 			err     error
-			handler *gomysql.RegisteredStruct[Document]
+			handler *gosqlite.RegisteredStruct[Document]
 		)
 
-		if handler, err = gomysql.Register(driver, Document{}); err != nil {
+		if handler, err = gosqlite.Register(driver, Document{}); err != nil {
 			t.Fatalf("failed to register Document struct: %v", err)
 		}
 
@@ -91,7 +91,7 @@ func TestOrderingFilter(t *testing.T) {
 
 		// Get in order
 		var results []*Document
-		if results, err = handler.SelectAllWithFilter(gomysql.NewFilter().Ordering(handler.FieldByGoName("Creation"), true)); err != nil {
+		if results, err = handler.SelectAllWithFilter(gosqlite.NewFilter().Ordering(handler.FieldByGoName("Creation"), true)); err != nil {
 			t.Fatalf("failed to select all documents with ordering: %v", err)
 		}
 
@@ -103,13 +103,13 @@ func TestOrderingFilter(t *testing.T) {
 }
 
 func TestTimeComparisonFilter(t *testing.T) {
-	withTestDB(t, func(driver *gomysql.Driver) {
+	withTestDB(t, func(driver *gosqlite.Driver) {
 		var (
 			err     error
-			handler *gomysql.RegisteredStruct[Document]
+			handler *gosqlite.RegisteredStruct[Document]
 		)
 
-		if handler, err = gomysql.Register(driver, Document{}); err != nil {
+		if handler, err = gosqlite.Register(driver, Document{}); err != nil {
 			t.Fatalf("failed to register Document struct: %v", err)
 		}
 
@@ -130,14 +130,14 @@ func TestTimeComparisonFilter(t *testing.T) {
 		cutoff := base.In(time.FixedZone("EST", -5*60*60))
 
 		older, err := handler.SelectAllWithFilter(
-			gomysql.NewFilter().KeyCmp(handler.FieldByGoName("Creation"), gomysql.OpLessThan, cutoff),
+			gosqlite.NewFilter().KeyCmp(handler.FieldByGoName("Creation"), gosqlite.OpLessThan, cutoff),
 		)
 		if err != nil {
 			t.Fatalf("failed to select older documents: %v", err)
 		}
 
 		younger, err := handler.SelectAllWithFilter(
-			gomysql.NewFilter().KeyCmp(handler.FieldByGoName("Creation"), gomysql.OpGreaterThan, cutoff),
+			gosqlite.NewFilter().KeyCmp(handler.FieldByGoName("Creation"), gosqlite.OpGreaterThan, cutoff),
 		)
 		if err != nil {
 			t.Fatalf("failed to select younger documents: %v", err)

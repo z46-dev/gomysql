@@ -5,16 +5,16 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/z46-dev/gomysql"
+	"github.com/z46-dev/gosqlite"
 )
 
 type Document struct {
-	ID           int       `gomysql:"id,primary,increment"`
-	Title        string    `gomysql:"title"`
-	Body         string    `gomysql:"body"`
-	Tags         []string  `gomysql:"tags"`
-	Creation     time.Time `gomysql:"creation"`
-	BooleanField bool      `gomysql:"boolean_field"`
+	ID           int       `gosqlite:"id,primary,increment"`
+	Title        string    `gosqlite:"title"`
+	Body         string    `gosqlite:"body"`
+	Tags         []string  `gosqlite:"tags"`
+	Creation     time.Time `gosqlite:"creation"`
+	BooleanField bool      `gosqlite:"boolean_field"`
 }
 
 func twoDocsMatch(t *testing.T, doc1, doc2 *Document) {
@@ -26,10 +26,10 @@ func twoDocsMatch(t *testing.T, doc1, doc2 *Document) {
 	assert.Equal(t, doc1.BooleanField, doc2.BooleanField, "Boolean fields should match")
 }
 
-func withTestDB(t testing.TB, fn func(*gomysql.Driver)) {
+func withTestDB(t testing.TB, fn func(*gosqlite.Driver)) {
 	t.Helper()
 
-	driver, err := gomysql.Begin(":memory:")
+	driver, err := gosqlite.Begin(":memory:")
 	if err != nil {
 		t.Fatalf("failed to connect to database: %v", err)
 	}
@@ -44,16 +44,16 @@ func withTestDB(t testing.TB, fn func(*gomysql.Driver)) {
 }
 
 type MultiLayerStructEmbeddedStruct struct {
-	Name    string `gomysql:"name"`
-	Content string `gomysql:"content"`
+	Name    string `gosqlite:"name"`
+	Content string `gosqlite:"content"`
 }
 
 type MultiLayerStruct struct {
-	Name          string                          `gomysql:"name,primary,unique"`
-	Layer1        MultiLayerStructEmbeddedStruct  `gomysql:"layer1"`
-	Layer2        MultiLayerStructEmbeddedStruct  `gomysql:"layer2"`
-	PointerLayer1 *MultiLayerStructEmbeddedStruct `gomysql:"pointer_layer1"`
-	PointerLayer2 *MultiLayerStructEmbeddedStruct `gomysql:"pointer_layer2"`
+	Name          string                          `gosqlite:"name,primary,unique"`
+	Layer1        MultiLayerStructEmbeddedStruct  `gosqlite:"layer1"`
+	Layer2        MultiLayerStructEmbeddedStruct  `gosqlite:"layer2"`
+	PointerLayer1 *MultiLayerStructEmbeddedStruct `gosqlite:"pointer_layer1"`
+	PointerLayer2 *MultiLayerStructEmbeddedStruct `gosqlite:"pointer_layer2"`
 }
 
 func twoMultiLayerStructsMatch(t *testing.T, doc1, doc2 *MultiLayerStruct) {

@@ -3,14 +3,14 @@ package test
 import (
 	"testing"
 
-	"github.com/z46-dev/gomysql"
-	v1 "github.com/z46-dev/gomysql/test/migrationv1"
-	v2 "github.com/z46-dev/gomysql/test/migrationv2"
+	"github.com/z46-dev/gosqlite"
+	v1 "github.com/z46-dev/gosqlite/test/migrationv1"
+	v2 "github.com/z46-dev/gosqlite/test/migrationv2"
 )
 
 func TestMigrationAddColumn(t *testing.T) {
-	withTestDB(t, func(driver *gomysql.Driver) {
-		v1Handler, err := gomysql.Register(driver, v1.AddItem{})
+	withTestDB(t, func(driver *gosqlite.Driver) {
+		v1Handler, err := gosqlite.Register(driver, v1.AddItem{})
 		if err != nil {
 			t.Fatalf("failed to register v1 struct: %v", err)
 		}
@@ -20,12 +20,12 @@ func TestMigrationAddColumn(t *testing.T) {
 			t.Fatalf("failed to insert v1 item: %v", err)
 		}
 
-		v2Handler, err := gomysql.Register(driver, v2.AddItem{})
+		v2Handler, err := gosqlite.Register(driver, v2.AddItem{})
 		if err != nil {
 			t.Fatalf("failed to register v2 struct: %v", err)
 		}
 
-		if _, err := v2Handler.Migrate(gomysql.MigrationOptions{}); err != nil {
+		if _, err := v2Handler.Migrate(gosqlite.MigrationOptions{}); err != nil {
 			t.Fatalf("failed to migrate add column: %v", err)
 		}
 
@@ -41,8 +41,8 @@ func TestMigrationAddColumn(t *testing.T) {
 }
 
 func TestMigrationDropColumn(t *testing.T) {
-	withTestDB(t, func(driver *gomysql.Driver) {
-		v1Handler, err := gomysql.Register(driver, v1.DropItem{})
+	withTestDB(t, func(driver *gosqlite.Driver) {
+		v1Handler, err := gosqlite.Register(driver, v1.DropItem{})
 		if err != nil {
 			t.Fatalf("failed to register v1 struct: %v", err)
 		}
@@ -52,12 +52,12 @@ func TestMigrationDropColumn(t *testing.T) {
 			t.Fatalf("failed to insert v1 item: %v", err)
 		}
 
-		v2Handler, err := gomysql.Register(driver, v2.DropItem{})
+		v2Handler, err := gosqlite.Register(driver, v2.DropItem{})
 		if err != nil {
 			t.Fatalf("failed to register v2 struct: %v", err)
 		}
 
-		report, err := v2Handler.Migrate(gomysql.MigrationOptions{AllowDestructive: true})
+		report, err := v2Handler.Migrate(gosqlite.MigrationOptions{AllowDestructive: true})
 		if err != nil {
 			t.Fatalf("failed to migrate drop column: %v", err)
 		}
@@ -81,8 +81,8 @@ func TestMigrationDropColumn(t *testing.T) {
 }
 
 func TestMigrationChangeType(t *testing.T) {
-	withTestDB(t, func(driver *gomysql.Driver) {
-		v1Handler, err := gomysql.Register(driver, v1.TypeItem{})
+	withTestDB(t, func(driver *gosqlite.Driver) {
+		v1Handler, err := gosqlite.Register(driver, v1.TypeItem{})
 		if err != nil {
 			t.Fatalf("failed to register v1 struct: %v", err)
 		}
@@ -92,12 +92,12 @@ func TestMigrationChangeType(t *testing.T) {
 			t.Fatalf("failed to insert v1 item: %v", err)
 		}
 
-		v2Handler, err := gomysql.Register(driver, v2.TypeItem{})
+		v2Handler, err := gosqlite.Register(driver, v2.TypeItem{})
 		if err != nil {
 			t.Fatalf("failed to register v2 struct: %v", err)
 		}
 
-		report, err := v2Handler.Migrate(gomysql.MigrationOptions{AllowDestructive: true})
+		report, err := v2Handler.Migrate(gosqlite.MigrationOptions{AllowDestructive: true})
 		if err != nil {
 			t.Fatalf("failed to migrate type change: %v", err)
 		}
@@ -122,13 +122,13 @@ func TestMigrationChangeType(t *testing.T) {
 }
 
 func TestForeignKeyConstraint(t *testing.T) {
-	withTestDB(t, func(driver *gomysql.Driver) {
-		parentHandler, err := gomysql.Register(driver, v2.Parent{})
+	withTestDB(t, func(driver *gosqlite.Driver) {
+		parentHandler, err := gosqlite.Register(driver, v2.Parent{})
 		if err != nil {
 			t.Fatalf("failed to register parent struct: %v", err)
 		}
 
-		childHandler, err := gomysql.Register(driver, v2.Child{})
+		childHandler, err := gosqlite.Register(driver, v2.Child{})
 		if err != nil {
 			t.Fatalf("failed to register child struct: %v", err)
 		}
@@ -154,13 +154,13 @@ func TestForeignKeyConstraint(t *testing.T) {
 }
 
 func TestMigrationAddForeignKey(t *testing.T) {
-	withTestDB(t, func(driver *gomysql.Driver) {
-		parentHandler, err := gomysql.Register(driver, v1.Parent{})
+	withTestDB(t, func(driver *gosqlite.Driver) {
+		parentHandler, err := gosqlite.Register(driver, v1.Parent{})
 		if err != nil {
 			t.Fatalf("failed to register parent struct: %v", err)
 		}
 
-		v1ChildHandler, err := gomysql.Register(driver, v1.Child{})
+		v1ChildHandler, err := gosqlite.Register(driver, v1.Child{})
 		if err != nil {
 			t.Fatalf("failed to register v1 child struct: %v", err)
 		}
@@ -175,12 +175,12 @@ func TestMigrationAddForeignKey(t *testing.T) {
 			t.Fatalf("failed to insert v1 child: %v", err)
 		}
 
-		v2ChildHandler, err := gomysql.Register(driver, v2.Child{})
+		v2ChildHandler, err := gosqlite.Register(driver, v2.Child{})
 		if err != nil {
 			t.Fatalf("failed to register v2 child struct: %v", err)
 		}
 
-		report, err := v2ChildHandler.Migrate(gomysql.MigrationOptions{AllowDestructive: true})
+		report, err := v2ChildHandler.Migrate(gosqlite.MigrationOptions{AllowDestructive: true})
 		if err != nil {
 			t.Fatalf("failed to migrate foreign key change: %v", err)
 		}
@@ -209,13 +209,13 @@ func TestMigrationAddForeignKey(t *testing.T) {
 }
 
 func TestMigrationChangeForeignKeyDeleteAction(t *testing.T) {
-	withTestDB(t, func(driver *gomysql.Driver) {
-		parentHandler, err := gomysql.Register(driver, v1.Parent{})
+	withTestDB(t, func(driver *gosqlite.Driver) {
+		parentHandler, err := gosqlite.Register(driver, v1.Parent{})
 		if err != nil {
 			t.Fatalf("failed to register parent struct: %v", err)
 		}
 
-		v1ChildHandler, err := gomysql.Register(driver, v1.CascadeChild{})
+		v1ChildHandler, err := gosqlite.Register(driver, v1.CascadeChild{})
 		if err != nil {
 			t.Fatalf("failed to register v1 child struct: %v", err)
 		}
@@ -230,12 +230,12 @@ func TestMigrationChangeForeignKeyDeleteAction(t *testing.T) {
 			t.Fatalf("failed to insert v1 child: %v", err)
 		}
 
-		v2ChildHandler, err := gomysql.Register(driver, v2.CascadeChild{})
+		v2ChildHandler, err := gosqlite.Register(driver, v2.CascadeChild{})
 		if err != nil {
 			t.Fatalf("failed to register v2 child struct: %v", err)
 		}
 
-		report, err := v2ChildHandler.Migrate(gomysql.MigrationOptions{AllowDestructive: true})
+		report, err := v2ChildHandler.Migrate(gosqlite.MigrationOptions{AllowDestructive: true})
 		if err != nil {
 			t.Fatalf("failed to migrate foreign key delete action: %v", err)
 		}

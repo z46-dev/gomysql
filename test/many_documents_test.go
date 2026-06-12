@@ -6,17 +6,17 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/z46-dev/gomysql"
+	"github.com/z46-dev/gosqlite"
 )
 
 func TestManyDocs(t *testing.T) {
-	withTestDB(t, func(driver *gomysql.Driver) {
+	withTestDB(t, func(driver *gosqlite.Driver) {
 		var (
 			err     error
-			handler *gomysql.RegisteredStruct[Document]
+			handler *gosqlite.RegisteredStruct[Document]
 		)
 
-		if handler, err = gomysql.Register(driver, Document{}); err != nil {
+		if handler, err = gosqlite.Register(driver, Document{}); err != nil {
 			t.Fatalf("failed to register Document struct: %v", err)
 		}
 

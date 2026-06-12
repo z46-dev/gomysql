@@ -4,15 +4,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/z46-dev/gomysql"
+	"github.com/z46-dev/gosqlite"
 )
 
 type PointerPrimitiveDoc struct {
-	ID       int      `gomysql:"id,primary,increment"`
-	Age      *int     `gomysql:"age"`
-	Score    *float64 `gomysql:"score"`
-	Enabled  *bool    `gomysql:"enabled"`
-	Nickname *string  `gomysql:"nickname"`
+	ID       int      `gosqlite:"id,primary,increment"`
+	Age      *int     `gosqlite:"age"`
+	Score    *float64 `gosqlite:"score"`
+	Enabled  *bool    `gosqlite:"enabled"`
+	Nickname *string  `gosqlite:"nickname"`
 }
 
 func intPtr(v int) *int             { return &v }
@@ -21,13 +21,13 @@ func boolPtr(v bool) *bool          { return &v }
 func stringPtr(v string) *string    { return &v }
 
 func TestPointerPrimitiveInsertAndNullFilter(t *testing.T) {
-	withTestDB(t, func(driver *gomysql.Driver) {
+	withTestDB(t, func(driver *gosqlite.Driver) {
 		var (
 			err     error
-			handler *gomysql.RegisteredStruct[PointerPrimitiveDoc]
+			handler *gosqlite.RegisteredStruct[PointerPrimitiveDoc]
 		)
 
-		if handler, err = gomysql.Register(driver, PointerPrimitiveDoc{}); err != nil {
+		if handler, err = gosqlite.Register(driver, PointerPrimitiveDoc{}); err != nil {
 			t.Fatalf("failed to register PointerPrimitiveDoc struct: %v", err)
 		}
 
@@ -69,8 +69,8 @@ func TestPointerPrimitiveInsertAndNullFilter(t *testing.T) {
 		assert.Nil(t, fetchedNulls.Nickname)
 
 		nullResults, err := handler.SelectAllWithFilter(
-			gomysql.NewFilter().
-				KeyCmp(handler.FieldByGoName("Age"), gomysql.OpIsNull, nil),
+			gosqlite.NewFilter().
+				KeyCmp(handler.FieldByGoName("Age"), gosqlite.OpIsNull, nil),
 		)
 		if err != nil {
 			t.Fatalf("failed to select null age rows: %v", err)
@@ -81,8 +81,8 @@ func TestPointerPrimitiveInsertAndNullFilter(t *testing.T) {
 		}
 
 		notNullResults, err := handler.SelectAllWithFilter(
-			gomysql.NewFilter().
-				KeyCmp(handler.FieldByGoName("Age"), gomysql.OpIsNotNull, nil),
+			gosqlite.NewFilter().
+				KeyCmp(handler.FieldByGoName("Age"), gosqlite.OpIsNotNull, nil),
 		)
 		if err != nil {
 			t.Fatalf("failed to select non-null age rows: %v", err)
@@ -96,13 +96,13 @@ func TestPointerPrimitiveInsertAndNullFilter(t *testing.T) {
 }
 
 func TestPointerPrimitiveUpdateWithFilter(t *testing.T) {
-	withTestDB(t, func(driver *gomysql.Driver) {
+	withTestDB(t, func(driver *gosqlite.Driver) {
 		var (
 			err     error
-			handler *gomysql.RegisteredStruct[PointerPrimitiveDoc]
+			handler *gosqlite.RegisteredStruct[PointerPrimitiveDoc]
 		)
 
-		if handler, err = gomysql.Register(driver, PointerPrimitiveDoc{}); err != nil {
+		if handler, err = gosqlite.Register(driver, PointerPrimitiveDoc{}); err != nil {
 			t.Fatalf("failed to register PointerPrimitiveDoc struct: %v", err)
 		}
 
@@ -118,9 +118,9 @@ func TestPointerPrimitiveUpdateWithFilter(t *testing.T) {
 		}
 
 		rows, err := handler.UpdateWithFilter(
-			gomysql.NewFilter().KeyCmp(handler.FieldByGoName("ID"), gomysql.OpEqual, item.ID),
-			gomysql.SetField(handler.FieldByGoName("Age"), nil),
-			gomysql.SetField(handler.FieldByGoName("Nickname"), "done"),
+			gosqlite.NewFilter().KeyCmp(handler.FieldByGoName("ID"), gosqlite.OpEqual, item.ID),
+			gosqlite.SetField(handler.FieldByGoName("Age"), nil),
+			gosqlite.SetField(handler.FieldByGoName("Nickname"), "done"),
 		)
 		if err != nil {
 			t.Fatalf("failed to update document: %v", err)
@@ -137,12 +137,12 @@ func TestPointerPrimitiveUpdateWithFilter(t *testing.T) {
 		}
 
 		returned, err := handler.UpdateWithFilterReturning(
-			gomysql.NewFilter().KeyCmp(handler.FieldByGoName("ID"), gomysql.OpEqual, item.ID),
-			[]*gomysql.RegisteredStructField{
+			gosqlite.NewFilter().KeyCmp(handler.FieldByGoName("ID"), gosqlite.OpEqual, item.ID),
+			[]*gosqlite.RegisteredStructField{
 				handler.FieldByGoName("Age"),
 				handler.FieldByGoName("Nickname"),
 			},
-			gomysql.SetField(handler.FieldByGoName("Nickname"), nil),
+			gosqlite.SetField(handler.FieldByGoName("Nickname"), nil),
 		)
 		if err != nil {
 			t.Fatalf("failed to update document with returning: %v", err)

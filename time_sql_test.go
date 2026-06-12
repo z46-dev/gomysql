@@ -1,4 +1,4 @@
-package gomysql
+package gosqlite
 
 import (
 	"strings"
@@ -7,13 +7,13 @@ import (
 )
 
 type TimeColumnItem struct {
-	ID        int       `gomysql:"id,primary"`
-	Timestamp time.Time `gomysql:"timestamp"`
+	ID        int       `gosqlite:"id,primary"`
+	Timestamp time.Time `gosqlite:"timestamp"`
 }
 
 type LegacyTimeItem struct {
-	ID        int       `gomysql:"id,primary"`
-	CreatedAt time.Time `gomysql:"created_at"`
+	ID        int       `gosqlite:"id,primary"`
+	CreatedAt time.Time `gosqlite:"created_at"`
 }
 
 func withRootTestDB(t *testing.T, fn func(driver *Driver)) {

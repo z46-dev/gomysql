@@ -4,22 +4,22 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/z46-dev/gomysql"
+	"github.com/z46-dev/gosqlite"
 )
 
 type Account struct {
-	Username string `gomysql:"username,primary,unique"`
-	Money    int    `gomysql:"money"`
+	Username string `gosqlite:"username,primary,unique"`
+	Money    int    `gosqlite:"money"`
 }
 
 func TestUpdateWithFilterReturning(t *testing.T) {
-	withTestDB(t, func(driver *gomysql.Driver) {
+	withTestDB(t, func(driver *gosqlite.Driver) {
 		var (
 			err     error
-			handler *gomysql.RegisteredStruct[Account]
+			handler *gosqlite.RegisteredStruct[Account]
 		)
 
-		if handler, err = gomysql.Register(driver, Account{}); err != nil {
+		if handler, err = gosqlite.Register(driver, Account{}); err != nil {
 			t.Fatalf("failed to register Account struct: %v", err)
 		}
 
@@ -34,19 +34,19 @@ func TestUpdateWithFilterReturning(t *testing.T) {
 			}
 		}
 
-		filter := gomysql.NewFilter().
-			KeyCmp(handler.FieldByGoName("Username"), gomysql.OpEqual, "bob").
+		filter := gosqlite.NewFilter().
+			KeyCmp(handler.FieldByGoName("Username"), gosqlite.OpEqual, "bob").
 			And().
-			KeyCmp(handler.FieldByGoName("Money"), gomysql.OpGreaterThan, 50)
+			KeyCmp(handler.FieldByGoName("Money"), gosqlite.OpGreaterThan, 50)
 
-		returning := []*gomysql.RegisteredStructField{
+		returning := []*gosqlite.RegisteredStructField{
 			handler.FieldByGoName("Money"),
 		}
 
 		rows, err := handler.UpdateWithFilterReturning(
 			filter,
 			returning,
-			gomysql.SetSub(handler.FieldByGoName("Money"), 25),
+			gosqlite.SetSub(handler.FieldByGoName("Money"), 25),
 		)
 		if err != nil {
 			t.Fatalf("failed to update with returning: %v", err)
@@ -66,13 +66,13 @@ func TestUpdateWithFilterReturning(t *testing.T) {
 }
 
 func TestUpdateWithFilter(t *testing.T) {
-	withTestDB(t, func(driver *gomysql.Driver) {
+	withTestDB(t, func(driver *gosqlite.Driver) {
 		var (
 			err     error
-			handler *gomysql.RegisteredStruct[Account]
+			handler *gosqlite.RegisteredStruct[Account]
 		)
 
-		if handler, err = gomysql.Register(driver, Account{}); err != nil {
+		if handler, err = gosqlite.Register(driver, Account{}); err != nil {
 			t.Fatalf("failed to register Account struct: %v", err)
 		}
 
@@ -88,12 +88,12 @@ func TestUpdateWithFilter(t *testing.T) {
 			}
 		}
 
-		filter := gomysql.NewFilter().
-			KeyCmp(handler.FieldByGoName("Money"), gomysql.OpLessThan, 20)
+		filter := gosqlite.NewFilter().
+			KeyCmp(handler.FieldByGoName("Money"), gosqlite.OpLessThan, 20)
 
 		rows, err := handler.UpdateWithFilter(
 			filter,
-			gomysql.SetField(handler.FieldByGoName("Money"), 0),
+			gosqlite.SetField(handler.FieldByGoName("Money"), 0),
 		)
 		if err != nil {
 			t.Fatalf("failed to update with filter: %v", err)

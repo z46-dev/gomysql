@@ -6,17 +6,17 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/z46-dev/gomysql"
+	"github.com/z46-dev/gosqlite"
 )
 
 func TestCountWithFilter(t *testing.T) {
-	withTestDB(t, func(driver *gomysql.Driver) {
+	withTestDB(t, func(driver *gosqlite.Driver) {
 		var (
 			err     error
-			handler *gomysql.RegisteredStruct[Document]
+			handler *gosqlite.RegisteredStruct[Document]
 		)
 
-		if handler, err = gomysql.Register(driver, Document{}); err != nil {
+		if handler, err = gosqlite.Register(driver, Document{}); err != nil {
 			t.Fatalf("failed to register Document struct: %v", err)
 		}
 
@@ -42,8 +42,8 @@ func TestCountWithFilter(t *testing.T) {
 		assert.EqualValues(t, 6, total, "expected total row count")
 
 		filtered, err := handler.CountWithFilter(
-			gomysql.NewFilter().
-				KeyCmp(handler.FieldByGoName("BooleanField"), gomysql.OpEqual, true),
+			gosqlite.NewFilter().
+				KeyCmp(handler.FieldByGoName("BooleanField"), gosqlite.OpEqual, true),
 		)
 		if err != nil {
 			t.Fatalf("failed to count filtered rows: %v", err)
@@ -51,7 +51,7 @@ func TestCountWithFilter(t *testing.T) {
 		assert.EqualValues(t, 3, filtered, "expected filtered row count")
 
 		limited, err := handler.CountWithFilter(
-			gomysql.NewFilter().
+			gosqlite.NewFilter().
 				Ordering(handler.FieldByGoName("Creation"), true).
 				Limit(2),
 		)
@@ -63,13 +63,13 @@ func TestCountWithFilter(t *testing.T) {
 }
 
 func TestDeleteWithFilterOldestRows(t *testing.T) {
-	withTestDB(t, func(driver *gomysql.Driver) {
+	withTestDB(t, func(driver *gosqlite.Driver) {
 		var (
 			err     error
-			handler *gomysql.RegisteredStruct[Document]
+			handler *gosqlite.RegisteredStruct[Document]
 		)
 
-		if handler, err = gomysql.Register(driver, Document{}); err != nil {
+		if handler, err = gosqlite.Register(driver, Document{}); err != nil {
 			t.Fatalf("failed to register Document struct: %v", err)
 		}
 
@@ -89,7 +89,7 @@ func TestDeleteWithFilterOldestRows(t *testing.T) {
 		}
 
 		deleted, err := handler.DeleteWithFilter(
-			gomysql.NewFilter().
+			gosqlite.NewFilter().
 				Ordering(handler.FieldByGoName("Creation"), true).
 				Limit(2),
 		)
@@ -105,7 +105,7 @@ func TestDeleteWithFilterOldestRows(t *testing.T) {
 		assert.EqualValues(t, 3, remainingCount, "expected three remaining rows")
 
 		remaining, err := handler.SelectAllWithFilter(
-			gomysql.NewFilter().
+			gosqlite.NewFilter().
 				Ordering(handler.FieldByGoName("Creation"), true),
 		)
 		if err != nil {

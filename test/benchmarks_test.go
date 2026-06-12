@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/z46-dev/gomysql"
+	"github.com/z46-dev/gosqlite"
 )
 
 func BenchmarkInsertSelect(b *testing.B) {
-	withTestDB(b, func(driver *gomysql.Driver) {
-		handler, err := gomysql.Register(driver, Document{})
+	withTestDB(b, func(driver *gosqlite.Driver) {
+		handler, err := gosqlite.Register(driver, Document{})
 		if err != nil {
 			b.Fatalf("failed to register Document struct: %v", err)
 		}
@@ -39,8 +39,8 @@ func BenchmarkInsertSelect(b *testing.B) {
 }
 
 func BenchmarkSelectAllWithFilter(b *testing.B) {
-	withTestDB(b, func(driver *gomysql.Driver) {
-		handler, err := gomysql.Register(driver, Document{})
+	withTestDB(b, func(driver *gosqlite.Driver) {
+		handler, err := gosqlite.Register(driver, Document{})
 		if err != nil {
 			b.Fatalf("failed to register Document struct: %v", err)
 		}
@@ -57,10 +57,10 @@ func BenchmarkSelectAllWithFilter(b *testing.B) {
 			}
 		}
 
-		filter := gomysql.NewFilter().
-			KeyCmp(handler.FieldByGoName("Title"), gomysql.OpLike, "%Bench%").
+		filter := gosqlite.NewFilter().
+			KeyCmp(handler.FieldByGoName("Title"), gosqlite.OpLike, "%Bench%").
 			And().
-			KeyCmp(handler.FieldByGoName("ID"), gomysql.OpGreaterThan, 100)
+			KeyCmp(handler.FieldByGoName("ID"), gosqlite.OpGreaterThan, 100)
 
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -74,8 +74,8 @@ func BenchmarkSelectAllWithFilter(b *testing.B) {
 }
 
 func BenchmarkUpdateWithFilterReturning(b *testing.B) {
-	withTestDB(b, func(driver *gomysql.Driver) {
-		handler, err := gomysql.Register(driver, Account{})
+	withTestDB(b, func(driver *gosqlite.Driver) {
+		handler, err := gosqlite.Register(driver, Account{})
 		if err != nil {
 			b.Fatalf("failed to register Account struct: %v", err)
 		}
@@ -90,9 +90,9 @@ func BenchmarkUpdateWithFilterReturning(b *testing.B) {
 			}
 		}
 
-		filter := gomysql.NewFilter().
-			KeyCmp(handler.FieldByGoName("Money"), gomysql.OpGreaterThanOrEqual, 1000)
-		returning := []*gomysql.RegisteredStructField{
+		filter := gosqlite.NewFilter().
+			KeyCmp(handler.FieldByGoName("Money"), gosqlite.OpGreaterThanOrEqual, 1000)
+		returning := []*gosqlite.RegisteredStructField{
 			handler.FieldByGoName("Money"),
 		}
 
@@ -101,7 +101,7 @@ func BenchmarkUpdateWithFilterReturning(b *testing.B) {
 			if _, err := handler.UpdateWithFilterReturning(
 				filter,
 				returning,
-				gomysql.SetSub(handler.FieldByGoName("Money"), 1),
+				gosqlite.SetSub(handler.FieldByGoName("Money"), 1),
 			); err != nil {
 				b.Fatalf("failed to update with returning: %v", err)
 			}

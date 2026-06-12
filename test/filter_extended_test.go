@@ -5,17 +5,17 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/z46-dev/gomysql"
+	"github.com/z46-dev/gosqlite"
 )
 
 func TestFilterGroupingAndIn(t *testing.T) {
-	withTestDB(t, func(driver *gomysql.Driver) {
+	withTestDB(t, func(driver *gosqlite.Driver) {
 		var (
 			err     error
-			handler *gomysql.RegisteredStruct[Document]
+			handler *gosqlite.RegisteredStruct[Document]
 		)
 
-		if handler, err = gomysql.Register(driver, Document{}); err != nil {
+		if handler, err = gosqlite.Register(driver, Document{}); err != nil {
 			t.Fatalf("failed to register Document struct: %v", err)
 		}
 
@@ -41,14 +41,14 @@ func TestFilterGroupingAndIn(t *testing.T) {
 			ids = append(ids, doc.ID)
 		}
 
-		filter := gomysql.NewFilter().
+		filter := gosqlite.NewFilter().
 			OpenGroup().
-			KeyCmp(handler.FieldByGoName("Title"), gomysql.OpLike, "%even%").
+			KeyCmp(handler.FieldByGoName("Title"), gosqlite.OpLike, "%even%").
 			Or().
-			KeyCmp(handler.FieldByGoName("Title"), gomysql.OpLike, "%odd%").
+			KeyCmp(handler.FieldByGoName("Title"), gosqlite.OpLike, "%odd%").
 			CloseGroup().
 			And().
-			KeyCmp(handler.FieldByGoName("ID"), gomysql.OpIn, []int{ids[0], ids[1], ids[3]})
+			KeyCmp(handler.FieldByGoName("ID"), gosqlite.OpIn, []int{ids[0], ids[1], ids[3]})
 
 		results, err := handler.SelectAllWithFilter(filter)
 		if err != nil {
@@ -63,13 +63,13 @@ func TestFilterGroupingAndIn(t *testing.T) {
 }
 
 func TestFilterNotIn(t *testing.T) {
-	withTestDB(t, func(driver *gomysql.Driver) {
+	withTestDB(t, func(driver *gosqlite.Driver) {
 		var (
 			err     error
-			handler *gomysql.RegisteredStruct[Document]
+			handler *gosqlite.RegisteredStruct[Document]
 		)
 
-		if handler, err = gomysql.Register(driver, Document{}); err != nil {
+		if handler, err = gosqlite.Register(driver, Document{}); err != nil {
 			t.Fatalf("failed to register Document struct: %v", err)
 		}
 
@@ -88,8 +88,8 @@ func TestFilterNotIn(t *testing.T) {
 			ids = append(ids, doc.ID)
 		}
 
-		filter := gomysql.NewFilter().
-			KeyCmp(handler.FieldByGoName("ID"), gomysql.OpNotIn, []int{ids[1], ids[2]})
+		filter := gosqlite.NewFilter().
+			KeyCmp(handler.FieldByGoName("ID"), gosqlite.OpNotIn, []int{ids[1], ids[2]})
 
 		results, err := handler.SelectAllWithFilter(filter)
 		if err != nil {
