@@ -56,6 +56,34 @@ func NewFilter() *Filter {
 	}
 }
 
+func normalizeBitwiseValueForField(key *RegisteredStructField, value any) any {
+	if key == nil {
+		panic("bitwise filter requires a valid key")
+	}
+
+	if key.InternalType != TypeRepInt && key.InternalType != TypeRepUint {
+		panic(fmt.Sprintf("bitwise filter requires an integer field, got %s", key.Opts.KeyName))
+	}
+
+	arg, err := normalizeValueForField(*key, value)
+	if err != nil {
+		panic(fmt.Sprintf("bitwise filter failed to normalize value for %s: %v", key.Opts.KeyName, err))
+	}
+
+	return arg
+}
+
+func (f *Filter) appendBitwiseCondition(key *RegisteredStructField, predicate string, args ...any) *Filter {
+	if !f.lastWasJoiner {
+		panic("bitwise filter must be preceded by a joiner (And/Or) or be the first condition")
+	}
+
+	f.whereTokens = append(f.whereTokens, fmt.Sprintf("(%s & ?) %s", key.Opts.KeyName, predicate))
+	f.args = append(f.args, args...)
+	f.lastWasJoiner = false
+	return f
+}
+
 func (f *Filter) KeyCmp(key *RegisteredStructField, op SQLOperator, value any) *Filter {
 	if key == nil {
 		panic("KeyCmp requires a valid key")
@@ -101,6 +129,21 @@ func (f *Filter) KeyCmp(key *RegisteredStructField, op SQLOperator, value any) *
 	}
 	f.lastWasJoiner = false
 	return f
+}
+
+func (f *Filter) KeyHasAnyBits(key *RegisteredStructField, mask any) *Filter {
+	arg := normalizeBitwiseValueForField(key, mask)
+	return f.appendBitwiseCondition(key, "!= 0", arg)
+}
+
+func (f *Filter) KeyHasAllBits(key *RegisteredStructField, mask any) *Filter {
+	arg := normalizeBitwiseValueForField(key, mask)
+	return f.appendBitwiseCondition(key, "= ?", arg, arg)
+}
+
+func (f *Filter) KeyHasNoBits(key *RegisteredStructField, mask any) *Filter {
+	arg := normalizeBitwiseValueForField(key, mask)
+	return f.appendBitwiseCondition(key, "= 0", arg)
 }
 
 func (f *Filter) And() *Filter {

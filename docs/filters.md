@@ -45,6 +45,25 @@ filter := gosqlite.NewFilter().
 	KeyCmp(handler.FieldByGoName("ID"), gosqlite.OpIn, []int{1, 2, 3})
 ```
 
+## Bitwise integer filters
+
+Integer fields can be filtered with SQLite bitwise `&` predicates:
+
+```go
+const (
+	PermissionRead = 1 << iota
+	PermissionWrite
+	PermissionAdmin
+)
+
+filter := gosqlite.NewFilter().
+	KeyHasAllBits(handler.FieldByGoName("Flags"), PermissionRead|PermissionWrite)
+```
+
+- `KeyHasAnyBits(field, mask)` matches rows where `(field & mask) != 0`.
+- `KeyHasAllBits(field, mask)` matches rows where `(field & mask) = mask`.
+- `KeyHasNoBits(field, mask)` matches rows where `(field & mask) = 0`.
+
 ## Ordering, limit, and offset
 
 ```go
